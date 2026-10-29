@@ -8,9 +8,10 @@
 //   Data/vault, Data/webcache, Data/tiles
 //   Start Holdfast                   optional copy of the program: the portable .exe itself, or a .cmd launcher for App/
 //   App/                             the installed program's files, when copied from an installed app
+//   .holdfast-index.json             size, time and sha256 of each file written, so unchanged files are not copied again
 //
-// Folders are synced: unchanged files (same size and modified time) are skipped, files no longer present are removed,
-// so repeat backups of large map and page caches are quick.
+// Folders are synced: unchanged files are skipped (same size and modified time, or the same content as the index
+// records when only the time changed), files no longer present are removed, so repeat backups are quick.
 const { execFile } = require('child_process');
 const crypto = require('crypto');
 // original-fs: Electron's patched fs treats .asar archives as folders, which breaks copying the program itself.
@@ -22,6 +23,7 @@ const { mergePlan, SKIP_KEYS } = require('./merge');
 const FOLDER = 'Holdfast Backup';
 const LAUNCHER = 'Start Holdfast';
 const PORTABLE = 'holdfast-portable.json';
+const INDEX = '.holdfast-index.json';
 // Names used before the app was renamed to Holdfast.
 const LEGACY = { folder: 'EPS Backup', launcher: 'Start Emergency Planning System', portable: 'eps-portable.json' };
 
@@ -47,6 +49,20 @@ function walk(dir, base = dir, out = []) {
     else if (!/\.(tmp|bak)$/.test(e.name)) out.push(path.relative(base, p));
   }
   return out;
+}
+
+// File times within FAT's 2 second resolution. loose: also an exact hour out, as FAT drives store local time
+// and Windows reads them an hour off after the clocks change.
+function sameTime(x, y, loose) {
+  const d = Math.abs(x - y);
+  return d < 2000 || (loose && Math.abs(d - 3600000) < 2000);
+}
+
+function hashFile(f) {
+  return new Promise((resolve, reject) => {
+    const h = crypto.createHash('sha256');
+    fs.createReadStream(f).on('data', (d) => h.update(d)).on('end', () => resolve(h.digest('hex'))).on('error', reject);
+  });
 }
 
 function dirSize(dir) {
@@ -106,29 +122,54 @@ class UsbBackup {
 
   progress(p) { this.emit('backup:progress', p); }
 
-  // Mirror src into dest. Returns { copied, skipped, removed, bytes }.
-  async sync(src, dest, label, skip) {
+  // The drive's index of what backups wrote to it: { [folder or file]: entry or { [path in folder]: entry } },
+  // where an entry is { s: size, m: modified time, h: sha256 }.
+  loadIndex(root) {
+    try { return JSON.parse(fs.readFileSync(path.join(root, INDEX), 'utf8')); } catch (e) { return {}; }
+  }
+
+  // Copies a to b unless b already holds the same content. Returns { copied, entry } with b's new index entry
+  // (only when track is set: making an entry reads the whole of a).
+  // Same size and time: skipped straight away. Same size but a different time (a reinstalled program whose files
+  // all get new dates, or a FAT drive read after the clocks change): skipped if b is untouched since the last
+  // backup and a's content matches what was written then; only b's date is updated.
+  async copyIfChanged(a, b, prev, track) {
+    const sa = fs.statSync(a);
+    let sb = null;
+    try { sb = fs.statSync(b); } catch (e) { /* not there yet */ }
+    const known = (e, size, m) => e && e.s === size && e.h && sameTime(e.m, m, true);
+    const entry = async (h) => (track ? { s: sa.size, m: sa.mtimeMs, h: h || (await hashFile(a)) } : null);
+    if (sb && sb.size === sa.size) {
+      if (sameTime(sb.mtimeMs, sa.mtimeMs)) return { copied: false, entry: known(prev, sa.size, sa.mtimeMs) ? prev : await entry() };
+      if (known(prev, sb.size, sb.mtimeMs)) {
+        const h = await hashFile(a);
+        if (h === prev.h) {
+          fs.utimesSync(b, sa.atime, sa.mtime);
+          return { copied: false, entry: await entry(h) };
+        }
+      }
+    }
+    fs.mkdirSync(path.dirname(b), { recursive: true });
+    await fs.promises.copyFile(a, b);
+    fs.utimesSync(b, sa.atime, sa.mtime);
+    return { copied: true, entry: await entry(), size: sa.size };
+  }
+
+  // Mirror src into dest. idx: the index entries for dest, updated in place when given. Returns { copied, skipped, removed, bytes }.
+  async sync(src, dest, label, skip, idx) {
     const files = walk(src).filter((f) => !(skip && skip.test(f)));
     const st = { copied: 0, skipped: 0, removed: 0, bytes: 0 };
     fs.mkdirSync(dest, { recursive: true });
+    const next = {};
     let i = 0;
     for (const rel of files) {
       if (this.cancelled) throw new Error('Cancelled');
-      const a = path.join(src, rel);
-      const b = path.join(dest, rel);
-      const sa = fs.statSync(a);
-      let same = false;
-      try { const sb = fs.statSync(b); same = sb.size === sa.size && Math.abs(sb.mtimeMs - sa.mtimeMs) < 2000; } catch (e) { /* not there yet */ }
-      if (same) st.skipped++;
-      else {
-        fs.mkdirSync(path.dirname(b), { recursive: true });
-        await fs.promises.copyFile(a, b);
-        fs.utimesSync(b, sa.atime, sa.mtime);
-        st.copied++;
-        st.bytes += sa.size;
-      }
+      const r = await this.copyIfChanged(path.join(src, rel), path.join(dest, rel), idx && idx[rel], !!idx);
+      next[rel] = r.entry;
+      if (r.copied) { st.copied++; st.bytes += r.size; } else st.skipped++;
       if (++i % 25 === 0 || i === files.length) this.progress({ phase: label, done: i, total: files.length, file: rel });
     }
+    if (idx) { for (const k of Object.keys(idx)) delete idx[k]; Object.assign(idx, next); }
     const keep = new Set(files.map((f) => f.toLowerCase()));
     for (const rel of walk(dest)) if (!keep.has(rel.toLowerCase())) { fs.rmSync(path.join(dest, rel), { force: true }); st.removed++; }
     return st;
@@ -151,6 +192,7 @@ class UsbBackup {
     }
     const data = path.join(root, 'Data');
     fs.mkdirSync(data, { recursive: true });
+    const index = this.loadIndex(root);
     const id = (old && old.id) || crypto.randomBytes(8).toString('hex');
     // Mark as in progress until the manifest is rewritten at the end.
     fs.writeFileSync(path.join(root, 'backup.json'), JSON.stringify({ ...(old || {}), complete: false, started: new Date().toISOString() }, null, 1));
@@ -165,6 +207,7 @@ class UsbBackup {
         const blob = seal(key, Buffer.from(JSON.stringify(this.store.all())), 'plan');
         fs.writeFileSync(path.join(data, 'plan.epsenc'), JSON.stringify({ format: 'eps-plan-enc', version: 1, kdf: { ...KDF, salt: salt.toString('base64') }, data: blob.toString('base64') }));
         fs.rmSync(path.join(data, 'data'), { recursive: true, force: true });
+        delete index['Data/data'];
         contents.plan = { encrypted: true };
       } else {
         steps.push(['Plan data', 'data']);
@@ -176,7 +219,7 @@ class UsbBackup {
     if (opts.library) steps.push(['Offline library', 'webcache']);
     if (opts.tiles) steps.push(['Map tiles', 'tiles']);
     for (const [label, dir] of steps) {
-      const r = await this.sync(path.join(this.dataRoot, dir), path.join(data, dir), label);
+      const r = await this.sync(path.join(this.dataRoot, dir), path.join(data, dir), label, null, (index['Data/' + dir] = index['Data/' + dir] || {}));
       const key = { data: 'plan', vault: 'vault', webcache: 'library', tiles: 'tiles' }[dir];
       contents[key] = { ...(contents[key] || {}), ...r };
     }
@@ -189,13 +232,13 @@ class UsbBackup {
         if (src.kind === 'file') {
           // The portable build is one exe: put it at the top of the backup folder, next to the data.
           this.progress({ phase: 'Program', done: 0, total: 1, file: path.basename(src.path) });
-          await fs.promises.copyFile(src.path, path.join(root, LAUNCHER + '.exe'));
+          index.exe = (await this.copyIfChanged(src.path, path.join(root, LAUNCHER + '.exe'), index.exe, true)).entry;
           fs.writeFileSync(path.join(root, PORTABLE), JSON.stringify({ dataDir: 'Data' }, null, 1));
           fs.rmSync(path.join(root, LAUNCHER + '.cmd'), { force: true });
         } else {
           // An installed copy is a folder of support files. Keep them in App and put a launcher at the top.
           const dest = path.join(root, 'App');
-          await this.sync(src.path, dest, 'Program', /^Uninstall .*\.exe$/i);
+          await this.sync(src.path, dest, 'Program', /^Uninstall .*\.exe$/i, (index.App = index.App || {}));
           fs.writeFileSync(path.join(dest, PORTABLE), JSON.stringify({ dataDir: '../Data' }, null, 1));
           fs.rmSync(path.join(dest, LEGACY.portable), { force: true });
           fs.writeFileSync(path.join(root, LAUNCHER + '.cmd'), `@start "" "%~dp0App\\${path.basename(process.execPath)}"\r\n`);
@@ -212,6 +255,7 @@ class UsbBackup {
     }
 
     fs.writeFileSync(path.join(root, 'README.txt'), readme(contents));
+    fs.writeFileSync(path.join(root, INDEX), JSON.stringify(index));
     const manifest = { format: 'eps-backup-folder', version: 1, id, created: new Date().toISOString(), appVersion: this.app.getVersion(), computer: require('os').hostname(), contents, complete: true };
     fs.writeFileSync(path.join(root, 'backup.json'), JSON.stringify(manifest, null, 1));
     this.saveBase(id, { plan: opts.plan, vault: opts.vault });

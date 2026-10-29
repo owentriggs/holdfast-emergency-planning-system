@@ -54,8 +54,14 @@ p { margin: 4px 0; }
 
 /* Navigation */
 #nav { width: 200px; flex: none; background: var(--nav); color: var(--navtext); display: flex; flex-direction: column; user-select: none; }
-.brand { display: flex; align-items: center; gap: 8px; padding: 10px 12px; font-weight: 700; font-size: 11px; letter-spacing: .08em; color: #fff; border-bottom: 1px solid #000; line-height: 1.3; }
+.brand { display: flex; align-items: center; gap: 10px; padding: 10px 12px; font-weight: 700; font-size: 11px; letter-spacing: .08em; color: #fff; border-bottom: 1px solid #000; line-height: 1.3; }
 #navlist { flex: 1; overflow: auto; padding: 4px 0; }
+/* Thin and out of the way: no arrows, and the bar only shows while the pointer is over the list. */
+#navlist::-webkit-scrollbar { width: 6px; }
+#navlist::-webkit-scrollbar-track, #navlist::-webkit-scrollbar-button { background: transparent; display: none; }
+#navlist::-webkit-scrollbar-thumb { background: transparent; border-radius: 3px; }
+#navlist:hover::-webkit-scrollbar-thumb { background: #4a535e; }
+#navlist::-webkit-scrollbar-thumb:hover { background: #5d6772; }
 .navgroup { padding: 8px 12px 2px; font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: #7d8590; }
 .navitem { display: flex; align-items: center; gap: 6px; padding: 5px 12px; cursor: pointer; }
 .navitem:hover { background: #2d333b; }
@@ -234,7 +240,7 @@ button.iconbtn .mdi, .tbl td.act button .mdi { margin-right: 0; }
 .navfoot .mdi::before { font-size: 12px; }
 button.primary .mdi::before { color: inherit; }
 
-.brand img { width: 28px; height: 28px; flex: none; }
+.brand img { width: 34px; height: 34px; flex: none; }
 
 /* Page and tab intros */
 .intro { display: flex; gap: 6px; align-items: flex-start; color: var(--muted); margin: -4px 0 10px; font-size: 12px; }
@@ -260,5 +266,7 @@ button.danger-fill { background: var(--red); border-color: var(--red); color: #f
 .vaultpreview img.actual { max-width: none; max-height: none; cursor: zoom-out; align-self: flex-start; }
 .vaultpreview pre { align-self: stretch; width: 100%; margin: 0; padding: 10px; white-space: pre-wrap; font: 12px Consolas, monospace; background: var(--panel); }
 button.syncnote { background: var(--amber-bg); color: var(--amber); border-color: var(--amber); font-weight: 600; }
-.brand .name { font-size: 16px; letter-spacing: .12em; line-height: 1.1; }
-.brand .name small { display: block; font-size: 10px; font-weight: 400; letter-spacing: .04em; color: #9aa4ae; margin-top: 2px; }
+/* Wordmark face: Tektur (SIL Open Font License, see assets/fonts/Tektur-OFL.txt). Latin only, bundled for offline use. */
+@font-face { font-family: 'Tektur'; src: url('app://assets/fonts/tektur-600.woff2') format('woff2'); font-weight: 600; font-display: block; }
+.brand .name { font-family: 'Tektur', 'Segoe UI', sans-serif; font-weight: 600; font-size: 18px; letter-spacing: .06em; line-height: 1.05; }
+.brand .name small { display: block; font-family: 'Segoe UI', sans-serif; font-size: 10px; font-weight: 400; letter-spacing: .03em; white-space: nowrap; color: #9aa4ae; margin-top: 3px; }

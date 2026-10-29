@@ -3,6 +3,7 @@ import * as store from './store.js';
 import { esc, ageFrom, fmtDate } from './ui.js';
 import { NATIONAL_NUMBERS } from '../data/defaults.js';
 import { GUIDES, SOURCES, SEVERITY } from '../data/firstaid.js';
+import { hexField } from './hexfield.js';
 
 // Brand red from the logo; everything else is black ink and greys so it photocopies well.
 const CSS = `
@@ -48,7 +49,9 @@ li::marker { color: #5f6368; }
 .cover { page: cover; position: relative; width: 210mm; height: 296mm; overflow: hidden; break-after: page; }
 .cover svg.hex { position: absolute; left: 0; top: 0; }
 .cover .title { position: absolute; left: 22mm; right: 22mm; top: 168mm; }
-.cover .logo { width: 16mm; height: 16mm; display: block; margin-bottom: 7mm; }
+@font-face { font-family: 'Tektur'; src: url('app://assets/fonts/tektur-600.woff2') format('woff2'); font-weight: 600; }
+.cover .brand { display: flex; align-items: center; gap: 4mm; margin-bottom: 8mm; font-family: 'Tektur', 'Segoe UI', sans-serif; font-weight: 600; font-size: 17pt; letter-spacing: 1.5pt; }
+.cover .logo { width: 14mm; height: 14mm; display: block; }
 .cover .k { font-size: 9pt; font-weight: 700; text-transform: uppercase; letter-spacing: 2pt; color: #b3261e; }
 .cover h1 { font-size: 38pt; font-weight: 300; line-height: 1.05; margin: 2mm 0 6mm; letter-spacing: -0.5pt; }
 .cover .hh { font-size: 13pt; font-weight: 600; }
@@ -95,33 +98,6 @@ function tbl(cols, rows, empty = 'Nothing recorded yet') {
     .join('')}</tbody></table>`;
 }
 
-// Pointy-top hexagon field for the cover, densest at the top and fading out down the page. Units are mm.
-function hexField(w, h, r) {
-  const dx = Math.sqrt(3) * r;
-  const dy = 1.5 * r;
-  let seed = 11;
-  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
-  const tints = ['#b3261e', '#8f1d17', '#d9534f', '#e8a19c'];
-  let out = '';
-  for (let row = -1; row * dy < h + r; row++) {
-    for (let col = -1; col * dx < w + dx; col++) {
-      const cx = col * dx + (row % 2 ? dx / 2 : 0);
-      const cy = row * dy;
-      const fade = Math.max(0, 1 - cy / h) ** 1.4;
-      if (fade <= 0.02) continue;
-      const pts = [0, 1, 2, 3, 4, 5].map((i) => {
-        const a = (Math.PI / 180) * (60 * i - 30);
-        return `${(cx + r * 0.94 * Math.cos(a)).toFixed(2)},${(cy + r * 0.94 * Math.sin(a)).toFixed(2)}`;
-      }).join(' ');
-      const v = rnd();
-      const fill = v < 0.16 * fade ? tints[Math.floor(rnd() * tints.length)] : 'none';
-      const op = fill === 'none' ? 0 : (0.25 + 0.75 * rnd()) * fade;
-      out += `<polygon points="${pts}" fill="${fill}" fill-opacity="${op.toFixed(2)}" stroke="#b3261e" stroke-opacity="${(0.32 * fade).toFixed(2)}" stroke-width="0.3"/>`;
-    }
-  }
-  return `<svg class="hex" width="${w}mm" height="${h}mm" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">${out}</svg>`;
-}
-
 const LOGO = '<svg class="logo" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg"><rect x="8" y="8" width="240" height="240" rx="44" fill="#b3261e"/><path d="M128 40 L216 116 L216 210 L40 210 L40 116 Z" fill="none" stroke="#fff" stroke-width="18" stroke-linejoin="round"/><rect x="113" y="104" width="30" height="86" fill="#fff"/><rect x="85" y="132" width="86" height="30" fill="#fff"/></svg>';
 
 // Address lines without trailing commas, plus the postcode when the address does not already include it.
@@ -136,7 +112,7 @@ function cover() {
   const hh = store.get('household');
   const addr = addressLines(hh).join(', ');
   return `<div class="cover">${hexField(210, 175, 9)}
-    <div class="title">${LOGO}
+    <div class="title"><div class="brand">${LOGO}HOLDFAST</div>
       <div class="k">Keep this somewhere everyone can find it</div>
       <h1>Household<br>Emergency Plan</h1>
       ${hh.name ? `<div class="hh">${esc(hh.name)}</div>` : ''}
