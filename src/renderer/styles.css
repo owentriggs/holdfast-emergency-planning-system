@@ -235,6 +235,18 @@ dialog .dh { padding: 6px 10px; background: var(--panel2); border-bottom: 1px so
 dialog .db { padding: 10px; }
 dialog .df { padding: 6px 10px; border-top: 1px solid var(--line); display: flex; justify-content: flex-end; gap: 6px; }
 iframe.preview { flex: 1; border: 1px solid var(--line); background: #fff; width: 100%; }
+dialog.printdlg[open] { width: min(1200px, 94vw); height: 90vh; display: flex; flex-direction: column; }
+.printdlg .pbody { flex: 1; min-height: 0; display: flex; }
+.printdlg .pview { flex: 1; min-width: 0; overflow: auto; background: var(--bg); padding: 12px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.printdlg .pview.busy { opacity: .5; }
+.printdlg .pview.mono canvas { filter: grayscale(1); }
+.printdlg figure { margin: 0; }
+.printdlg canvas { display: block; background: #fff; box-shadow: 0 0 0 1px var(--line); }
+.printdlg figcaption { font-size: 11px; color: var(--muted); text-align: center; margin-top: 3px; }
+.printdlg .popts { width: 300px; flex: none; border-left: 1px solid var(--line); padding: 10px; overflow: auto; display: flex; flex-direction: column; gap: 10px; }
+.printdlg .popts .form { grid-template-columns: 56px 1fr; }
+.printdlg .popts input[type=text] { width: 100%; }
+input.bad { border-color: var(--red); outline-color: var(--red); }
 .wx td.ic { font-size: 11px; }
 
 /* Icons (Material Design Icons) */

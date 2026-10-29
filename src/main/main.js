@@ -7,6 +7,7 @@ const { WebCache } = require('./webcache');
 const { Tiles } = require('./tiles');
 const { Vault } = require('./vault');
 const { UsbBackup, PORTABLE, LEGACY, backupRoot } = require('./backup');
+const printjob = require('./printjob');
 
 // A copy of the program made by "USB Backup" carries holdfast-portable.json (eps-portable.json before the rename)
 // and keeps its data on the same drive.
@@ -50,8 +51,9 @@ const LIBS = {
   leaflet: path.join(ROOT, 'node_modules', 'leaflet', 'dist'),
   chartjs: path.join(ROOT, 'node_modules', 'chart.js', 'dist'),
   mdi: path.join(ROOT, 'node_modules', '@mdi', 'font'),
+  pdfjs: path.join(ROOT, 'node_modules', 'pdfjs-dist', 'build'),
 };
-const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.svg': 'image/svg+xml', '.json': 'application/json', '.map': 'application/json', '.woff2': 'font/woff2', '.woff': 'font/woff', '.ttf': 'font/ttf', '.eot': 'application/vnd.ms-fontobject' };
+const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.svg': 'image/svg+xml', '.json': 'application/json', '.map': 'application/json', '.woff2': 'font/woff2', '.woff': 'font/woff', '.ttf': 'font/ttf', '.eot': 'application/vnd.ms-fontobject' };
 
 let win, store, webcache, tiles, vault, usb;
 const emit = (ch, payload) => win && !win.isDestroyed() && win.webContents.send(ch, payload);
@@ -62,6 +64,8 @@ function serveApp(request) {
   const parts = decodeURIComponent(u.pathname).split('/').filter(Boolean);
   let base = RENDERER;
   if (u.host === 'lib') base = LIBS[parts.shift()];
+  // Module scripts and workers have to come from the page's own origin, so libraries loaded that way are under app://ui/vendor/.
+  else if (u.host === 'ui' && parts[0] === 'vendor') base = LIBS[parts.splice(0, 2)[1]];
   else if (u.host === 'assets') base = ASSETS;
   if (!base) return new Response('not found', { status: 404 });
   const file = path.normalize(path.join(base, ...parts));
@@ -192,7 +196,9 @@ async function withHtmlWindow(html, fn) {
 }
 
 const PDF_FOOTER = '<div style="font-family:Segoe UI,Arial,sans-serif;font-size:7pt;width:100%;margin:0 14mm;display:flex;justify-content:space-between;color:#5f6368"><span style="letter-spacing:0.6pt;text-transform:uppercase">Household emergency plan</span><span><span class="pageNumber"></span> / <span class="totalPages"></span></span></div>';
-const pdfOnce = (html) => withHtmlWindow(html, (pw) => pw.webContents.printToPDF({ pageSize: 'A4', printBackground: true, displayHeaderFooter: true, headerTemplate: '<span></span>', footerTemplate: PDF_FOOTER, margins: { marginType: 'custom', top: 0.4, bottom: 0.4, left: 0.4, right: 0.4 } }));
+// Booklet pages are A5. The cover is drawn at A4 size, so it is scaled down to fit.
+const A5_CSS = '<style>@page { size: A5; margin: 10mm 10mm 11mm; } .cover { zoom: 0.705; }</style>';
+const pdfOnce = (html, a5) => withHtmlWindow(html, (pw) => pw.webContents.printToPDF({ pageSize: a5 ? 'A5' : 'A4', printBackground: true, displayHeaderFooter: true, headerTemplate: '<span></span>', footerTemplate: PDF_FOOTER, margins: { marginType: 'custom', top: 0.4, bottom: 0.4, left: 0.4, right: 0.4 } }));
 
 // Page number of each named destination (an element id a link points at) in a PDF from printToPDF.
 function pdfDestPages(pdf) {
@@ -217,13 +223,17 @@ function pdfDestPages(pdf) {
 }
 
 // Fills in the contents page numbers (<!--pg:id-->...<!--/pg-->) from a first layout pass.
-async function withPageNumbers(html) {
+async function withPageNumbers(html, a5) {
   if (!html.includes('<!--pg:')) return html;
-  const pages = pdfDestPages(await pdfOnce(html));
+  const pages = pdfDestPages(await pdfOnce(html, a5));
   return html.replace(/<!--pg:([^>]*?)-->[\s\S]*?<!--\/pg-->/g, (_, id) => pages[id] || '');
 }
 
-const renderPdf = async (html) => pdfOnce(await withPageNumbers(html));
+// a5: lay the document out on A5 pages, for a booklet.
+const renderPdf = async (html, a5) => {
+  if (a5) html += A5_CSS;
+  return pdfOnce(await withPageNumbers(html, a5), a5);
+};
 
 function registerIpc(dataRoot) {
   ipcMain.handle('store:all', () => store.all());
@@ -313,16 +323,27 @@ function registerIpc(dataRoot) {
   });
   ipcMain.handle('vault:destroy', () => vault.destroy());
 
-  // Printing: render supplied HTML in a hidden window, then print or save as PDF.
-  ipcMain.handle('print:html', async (_e, html, mode = 'print') => {
-    if (mode === 'pdf') {
-      const r = await dialog.showSaveDialog(win, { title: 'Save as PDF', defaultPath: `Emergency plan ${new Date().toISOString().slice(0, 10)}.pdf`, filters: [{ name: 'PDF', extensions: ['pdf'] }] });
-      if (r.canceled) return { ok: false };
-      fs.writeFileSync(r.filePath, await renderPdf(html));
-      shell.openPath(r.filePath);
-      return { ok: true, path: r.filePath };
-    }
-    return withHtmlWindow(await withPageNumbers(html), (pw) => new Promise((resolve) => pw.webContents.print({ printBackground: true, footer: 'Holdfast Emergency Plan' }, (ok, reason) => resolve({ ok, reason }))));
+  // Printing. The app's print dialog has the document laid out as a PDF, previews that PDF and prints exactly it.
+  // The last layout is kept so that changing only the pages to print does not lay the document out again.
+  let layout = { key: null, pdf: null };
+  ipcMain.handle('print:printers', () => printjob.printers(win.webContents));
+  ipcMain.handle('print:build', async (_e, html, o = {}) => {
+    const key = (o.booklet ? 'a5:' : 'a4:') + html;
+    if (layout.key !== key) layout = { key, pdf: await renderPdf(html, o.booklet) };
+    return printjob.arrange(layout.pdf, o);
+  });
+  ipcMain.handle('print:run', (_e, pdf, o) => printjob.printPdf(Buffer.from(pdf), o));
+  ipcMain.handle('print:save', async (_e, pdf, name) => {
+    const r = await dialog.showSaveDialog(win, { title: 'Save as PDF', defaultPath: `${name || 'Emergency plan'} ${new Date().toISOString().slice(0, 10)}.pdf`, filters: [{ name: 'PDF', extensions: ['pdf'] }] });
+    if (r.canceled) return { ok: false };
+    fs.writeFileSync(r.filePath, Buffer.from(pdf));
+    shell.openPath(r.filePath);
+    return { ok: true, path: r.filePath };
+  });
+  ipcMain.handle('print:open', async (_e, pdf, name) => {
+    const err = await shell.openPath(printjob.tempPdf(Buffer.from(pdf), name));
+    if (err) throw new Error(err);
+    return true;
   });
 
   // USB / external drive backup

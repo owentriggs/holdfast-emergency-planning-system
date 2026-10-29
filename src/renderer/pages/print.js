@@ -1,6 +1,7 @@
 import * as store from '../lib/store.js';
-import { h, status, icon } from '../lib/ui.js';
+import { h, icon } from '../lib/ui.js';
 import { SECTIONS, buildDocument } from '../lib/printdoc.js';
+import { printDialog, savePdf } from '../lib/printdialog.js';
 import { GUIDES, CATEGORIES } from '../data/firstaid.js';
 
 const state = {
@@ -66,8 +67,8 @@ export function render(root, params) {
 
   const body = h('div', { class: 'body' },
     h('div', { class: 'row', style: 'margin-bottom:6px' },
-      h('button', { class: 'primary', onclick: async () => { const r = await window.api.print.html(html(), 'print'); status(r.ok ? 'Sent to printer' : 'Print cancelled' + (r.reason ? ': ' + r.reason : '')); } }, icon('printer'), 'Print...'),
-      h('button', { onclick: async () => { const r = await window.api.print.html(html(), 'pdf'); if (r.ok) status('Saved ' + r.path, 8000); } }, 'Save as PDF...'),
+      h('button', { class: 'primary', onclick: () => printDialog(html()) }, icon('printer'), 'Print...'),
+      h('button', { onclick: () => savePdf(html(), 'Emergency plan') }, 'Save as PDF...'),
       h('span', { class: 'muted' }, 'Preview below is A4. Printed copies work when there is no power or internet.')),
     frame);
 

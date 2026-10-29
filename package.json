@@ -1,7 +1,7 @@
 {
   "name": "holdfast-emergency-planning-system",
   "productName": "Holdfast Emergency Planning System",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Holdfast: offline-first household emergency planner for Windows (UK/Wales).",
   "main": "src/main/main.js",
   "private": true,
@@ -19,6 +19,8 @@
     "files": [
       "src/**/*",
       "node_modules/**/*",
+      "!node_modules/pdfjs-dist/{legacy,web,types,image_decoders}/**",
+      "!node_modules/pdfjs-dist/build/*.map",
       "package.json"
     ],
     "extraResources": [
@@ -49,7 +51,9 @@
   "dependencies": {
     "@mdi/font": "^7.4.47",
     "chart.js": "^4.4.4",
-    "leaflet": "^1.9.4"
+    "leaflet": "^1.9.4",
+    "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^4.10.38"
   },
   "devDependencies": {
     "electron": "^33.2.1",

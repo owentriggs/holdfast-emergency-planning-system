@@ -25,7 +25,7 @@ contextBridge.exposeInMainWorld('api', {
   },
   vault: Object.fromEntries(['status', 'create', 'unlock', 'lock', 'changePassword', 'list', 'saveEntry', 'removeEntry', 'addFiles', 'pickFiles', 'removeFile', 'saveCopy', 'openExternal', 'stats', 'backup', 'restore', 'destroy'].map((m) => [m, inv('vault:' + m)])),
   usb: Object.fromEntries(['drives', 'estimate', 'chooseFolder', 'run', 'restore', 'cancel', 'eject', 'openFolder', 'preview', 'apply', 'syncStatus', 'present'].map((m) => [m, inv('usb:' + m)])),
-  print: { html: inv('print:html') },
+  print: Object.fromEntries(['printers', 'build', 'run', 'save', 'open'].map((m) => [m, inv('print:' + m)])),
   backup: { export: inv('backup:export'), import: inv('backup:import') },
   app: { openDataFolder: inv('app:openDataFolder'), openExternal: inv('app:openExternal'), info: inv('app:info') },
   on: (ch, fn) => {

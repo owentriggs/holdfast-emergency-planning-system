@@ -1,5 +1,6 @@
 import * as store from '../lib/store.js';
 import { h, panel, status, fmtDate, fmtBytes, promptForm, confirmBox, daysUntil, icon, summary } from '../lib/ui.js';
+import { printDialog } from '../lib/printdialog.js';
 
 const CATEGORIES = ['Identity', 'Insurance', 'Property', 'Financial', 'Medical', 'Vehicle', 'Legal', 'Family', 'Pets', 'Home inventory', 'Other'];
 
@@ -87,7 +88,7 @@ export async function render(root) {
           h('div', { class: 'mono', style: 'font-size:22px;font-weight:600;text-align:center;padding:10px;border:1px solid var(--line);background:var(--panel2);user-select:all' }, code),
           h('div', { class: 'row' },
             h('button', { onclick: () => { navigator.clipboard.writeText(code); status('Copied'); } }, 'Copy'),
-            h('button', { onclick: () => window.api.print.html(`<!doctype html><meta charset="utf-8"><body style="font-family:Segoe UI,sans-serif;padding:20mm"><h2>Holdfast Emergency Planning System: document vault recovery code</h2><p>Created ${new Date().toLocaleDateString('en-GB')}. Use this if the vault password is forgotten.</p><p style="font:600 26px Consolas,monospace;border:1px solid #000;padding:12px;text-align:center">${code}</p><p>Keep this with your paper emergency plan. Anyone with this code and access to the computer can open the vault.</p></body>`) }, 'Print')),
+            h('button', { onclick: () => printDialog(`<!doctype html><meta charset="utf-8"><body style="font-family:Segoe UI,sans-serif;padding:20mm"><h2>Holdfast Emergency Planning System: document vault recovery code</h2><p>Created ${new Date().toLocaleDateString('en-GB')}. Use this if the vault password is forgotten.</p><p style="font:600 26px Consolas,monospace;border:1px solid #000;padding:12px;text-align:center">${code}</p><p>Keep this with your paper emergency plan. Anyone with this code and access to the computer can open the vault.</p></body>`, { name: 'Vault recovery code' }) }, 'Print...')),
           h('label', { class: 'chk' }, h('input', { type: 'checkbox', onchange: (e) => (cont.disabled = !e.target.checked) }), 'I have printed or written down the recovery code')),
         h('div', { class: 'df' }, cont));
       dlg.addEventListener('cancel', (e) => e.preventDefault());
