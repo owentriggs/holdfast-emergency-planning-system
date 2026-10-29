@@ -7,7 +7,7 @@ const state = {
   sections: new Set(['summary', 'contacts', 'people', 'medications', 'locations', 'utilities', 'meeting', 'scenarios', 'radio', 'checklists', 'firstaid']),
   checklists: null, // null = all
   guides: null,
-  pageBreaks: true,
+  pageBreaks: false,
 };
 
 export function render(root, params) {

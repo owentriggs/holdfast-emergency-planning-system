@@ -189,7 +189,39 @@ async function withHtmlWindow(html, fn) {
   }
 }
 
-const renderPdf = (html) => withHtmlWindow(html, (pw) => pw.webContents.printToPDF({ pageSize: 'A4', printBackground: true, margins: { marginType: 'custom', top: 0.4, bottom: 0.4, left: 0.4, right: 0.4 } }));
+const PDF_FOOTER = '<div style="font-size:7pt;width:100%;text-align:center;color:#555">Page <span class="pageNumber"></span> of <span class="totalPages"></span></div>';
+const pdfOnce = (html) => withHtmlWindow(html, (pw) => pw.webContents.printToPDF({ pageSize: 'A4', printBackground: true, displayHeaderFooter: true, headerTemplate: '<span></span>', footerTemplate: PDF_FOOTER, margins: { marginType: 'custom', top: 0.4, bottom: 0.4, left: 0.4, right: 0.4 } }));
+
+// Page number of each named destination (an element id a link points at) in a PDF from printToPDF.
+function pdfDestPages(pdf) {
+  const text = pdf.toString('latin1');
+  const obj = (n) => (text.match(new RegExp(`(?:^|\\s)${n} 0 obj\\s([\\s\\S]*?)endobj`)) || [])[1] || '';
+  const pages = [];
+  const walk = (n) => {
+    const kids = obj(n).match(/\/Kids\s*\[([^\]]*)\]/);
+    if (kids) for (const m of kids[1].matchAll(/(\d+) 0 R/g)) walk(m[1]);
+    else pages.push(n);
+  };
+  const root = text.match(/\/Pages (\d+) 0 R/);
+  const dests = text.match(/\/Dests (\d+) 0 R/);
+  if (!root || !dests) return {};
+  walk(root[1]);
+  const out = {};
+  for (const m of obj(dests[1]).matchAll(/\/([^\s[\/]+)\s*\[\s*(\d+) 0 R/g)) {
+    const name = m[1].replace(/#([0-9a-fA-F]{2})/g, (_, h) => String.fromCharCode(parseInt(h, 16)));
+    out[name] = pages.indexOf(m[2]) + 1;
+  }
+  return out;
+}
+
+// Fills in the contents page numbers (<!--pg:id-->...<!--/pg-->) from a first layout pass.
+async function withPageNumbers(html) {
+  if (!html.includes('<!--pg:')) return html;
+  const pages = pdfDestPages(await pdfOnce(html));
+  return html.replace(/<!--pg:([^>]*?)-->[\s\S]*?<!--\/pg-->/g, (_, id) => pages[id] || '');
+}
+
+const renderPdf = async (html) => pdfOnce(await withPageNumbers(html));
 
 function registerIpc(dataRoot) {
   ipcMain.handle('store:all', () => store.all());
@@ -279,7 +311,7 @@ function registerIpc(dataRoot) {
       shell.openPath(r.filePath);
       return { ok: true, path: r.filePath };
     }
-    return withHtmlWindow(html, (pw) => new Promise((resolve) => pw.webContents.print({ printBackground: true }, (ok, reason) => resolve({ ok, reason }))));
+    return withHtmlWindow(await withPageNumbers(html), (pw) => new Promise((resolve) => pw.webContents.print({ printBackground: true, footer: 'Holdfast Emergency Plan' }, (ok, reason) => resolve({ ok, reason }))));
   });
 
   // USB / external drive backup

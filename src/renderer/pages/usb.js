@@ -202,7 +202,7 @@ export async function render(root, params = {}) {
       busy = true;
       runBtn.disabled = true;
       cancelBtn.disabled = false;
-      const pdfHtml = opts.pdf ? buildDocument(SECTIONS.map((x) => x.id), { pageBreaks: true }) : null;
+      const pdfHtml = opts.pdf ? buildDocument(SECTIONS.map((x) => x.id)) : null;
       const go = (overwrite) => window.api.usb.run(target.path, { plan: opts.plan, password: opts.plan && opts.protect ? pw.value : null, vault: opts.vault, library: opts.library, tiles: opts.tiles, app: opts.app, pdfHtml, overwrite });
       try {
         let r;

@@ -9,10 +9,10 @@ const CSS = `
 * { box-sizing: border-box; }
 body { font-family: "Segoe UI", Arial, sans-serif; font-size: 10pt; color: #000; margin: 0; }
 h1 { font-size: 18pt; margin: 0 0 2mm; }
-h2 { font-size: 13pt; margin: 6mm 0 2mm; padding-bottom: 1mm; border-bottom: 2px solid #000; break-after: avoid; }
-h3 { font-size: 11pt; margin: 4mm 0 1.5mm; break-after: avoid; }
+h2 { font-size: 13pt; margin: 5mm 0 1.5mm; padding-bottom: 1mm; border-bottom: 2px solid #000; break-after: avoid; }
+h3 { font-size: 11pt; margin: 3mm 0 1mm; break-after: avoid; }
 p { margin: 1mm 0; }
-table { border-collapse: collapse; width: 100%; margin: 1mm 0 3mm; }
+table { border-collapse: collapse; width: 100%; margin: 1mm 0 2mm; }
 th, td { border: 1px solid #777; padding: 1mm 1.5mm; text-align: left; vertical-align: top; font-size: 9pt; }
 th { background: #e6e6e6; }
 tr { break-inside: avoid; }
@@ -23,7 +23,15 @@ tr { break-inside: avoid; }
 .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm; }
 ol, ul { margin: 1mm 0; padding-left: 6mm; }
 li { margin: 0.6mm 0; }
-.guide { break-inside: avoid-page; border-top: 1px solid #999; padding-top: 2mm; margin-top: 3mm; }
+.guide { break-inside: avoid; border-top: 1px solid #999; padding-top: 1.5mm; margin-bottom: 2.5mm; }
+.guide h3 { margin-top: 0; }
+.twocol { column-count: 2; column-gap: 6mm; }
+.toc { border: 1px solid #000; padding: 1.5mm 3mm; margin: 2mm 0; font-size: 8.5pt; }
+.toc ol { column-count: 3; column-gap: 5mm; margin: 1mm 0 0; padding: 0; list-style: none; }
+.toc li { display: flex; gap: 1mm; margin: 0.3mm 0; break-inside: avoid; }
+.toc li.sub { padding-left: 3mm; font-size: 8pt; }
+.toc li .dots { flex: 1; border-bottom: 1px dotted #888; margin-bottom: 1mm; }
+.toc a { color: #000; text-decoration: none; }
 .tick { width: 6mm; text-align: center; font-size: 12pt; }
 .sev { display: inline-block; border: 1px solid #000; padding: 0 2mm; font-size: 8pt; font-weight: 700; margin-left: 2mm; }
 .pb { break-before: page; }
@@ -46,31 +54,35 @@ function tbl(cols, rows, empty = 'None recorded') {
 
 const nonEmpty = (rows, keys) => rows.filter((r) => keys.some((k) => r[k] != null && String(r[k]).trim() !== ''));
 
+// title: name in the contents. page: the section sits on its own pages (summary for the fridge, first aid as a
+// standalone reference, cards for cutting out).
+// sub: entries listed under the section in the contents, each { id, title } of an element inside it.
 export const SECTIONS = [
-  { id: 'summary', label: 'Summary page (address, people, key numbers)', build: summary },
-  { id: 'contacts', label: 'Contacts and national numbers', build: contacts },
-  { id: 'people', label: 'People, medical details and pets', build: people },
-  { id: 'medications', label: 'Medications', build: medications },
-  { id: 'locations', label: 'Key locations (stopcock, meters, kit)', build: locations },
-  { id: 'utilities', label: 'Utilities and accounts', build: utilities },
-  { id: 'meeting', label: 'Meeting points and routes', build: meeting },
-  { id: 'scenarios', label: 'Scenario plans', build: scenarios },
-  { id: 'documents', label: 'Documents register', build: documents },
-  { id: 'radio', label: 'Radio frequencies', build: radio },
-  { id: 'supplies', label: 'Supplies and stock', build: supplies },
-  { id: 'checklists', label: 'Checklists', build: checklists },
-  { id: 'kit', label: 'First aid kit inventory', build: kit },
-  { id: 'firstaid', label: 'First aid guides', build: firstaid },
-  { id: 'cards', label: 'Wallet cards (cut out)', build: cards },
+  { id: 'summary', title: 'Summary', label: 'Summary page (address, people, key numbers)', build: summary, page: true },
+  { id: 'contacts', title: 'Contacts', label: 'Contacts and national numbers', build: contacts },
+  { id: 'people', title: 'People and pets', label: 'People, medical details and pets', build: people },
+  { id: 'medications', title: 'Medications', label: 'Medications', build: medications },
+  { id: 'locations', title: 'Key locations', label: 'Key locations (stopcock, meters, kit)', build: locations },
+  { id: 'utilities', title: 'Utilities and accounts', label: 'Utilities and accounts', build: utilities },
+  { id: 'meeting', title: 'Meeting points and routes', label: 'Meeting points and routes', build: meeting },
+  { id: 'scenarios', title: 'Scenario plans', label: 'Scenario plans', build: scenarios, sub: () => store.get('scenarios').map((s) => ({ id: 'sc-' + s.id, title: s.name })) },
+  { id: 'documents', title: 'Documents register', label: 'Documents register', build: documents },
+  { id: 'radio', title: 'Radio frequencies', label: 'Radio frequencies', build: radio },
+  { id: 'supplies', title: 'Supplies and stock', label: 'Supplies and stock', build: supplies },
+  { id: 'checklists', title: 'Checklists', label: 'Checklists', build: checklists, sub: (opts) => chosenChecklists(opts).map((c) => ({ id: 'cl-' + c.id, title: c.name })) },
+  { id: 'kit', title: 'First aid kit', label: 'First aid kit inventory', build: kit },
+  { id: 'firstaid', title: 'First aid', label: 'First aid guides', build: firstaid, page: true, sub: (opts) => chosenGuides(opts).map((g) => ({ id: 'fa-' + g.id, title: g.title })) },
+  { id: 'cards', title: 'Wallet cards', label: 'Wallet cards (cut out)', build: cards, page: true },
 ];
+
+const chosenChecklists = (opts) => store.get('checklists').filter((c) => !opts.checklistIds || opts.checklistIds.includes(c.id));
+const chosenGuides = (opts) => GUIDES.filter((g) => !opts.guideIds || opts.guideIds.includes(g.id));
 
 function summary() {
   const hh = store.get('household');
   const ice = store.get('contacts').filter((c) => c.ice || c.category === 'Out-of-area contact').filter((c) => c.name || c.phone);
   const mp = nonEmpty(store.get('meeting'), ['name', 'address']);
   return `
-  <h1>Household Emergency Plan</h1>
-  <p class="meta">${esc(hh.name || '')} &middot; Printed ${fmtDate(new Date().toISOString(), true)}</p>
   <div class="box red"><span class="big">Emergency: 999 or 112</span> &nbsp; NHS non-emergency: <b>111</b> &nbsp; Power cut: <b>105</b> &nbsp; Gas: <b>0800 111 999</b> &nbsp; Floodline: <b>0345 988 1188</b></div>
   <div class="cols">
     <div>
@@ -132,11 +144,11 @@ function meeting() {
 }
 
 function scenarios() {
-  return `<h2>Scenario plans</h2>` + store.get('scenarios').map((s) => `
-    <div class="guide"><h3>${esc(s.name)}</h3>
+  return `<h2>Scenario plans</h2><div class="twocol">` + store.get('scenarios').map((s) => `
+    <div class="guide" id="sc-${esc(s.id)}"><h3>${esc(s.name)}</h3>
     ${s.trigger ? `<p><b>When:</b> ${esc(s.trigger)}</p>` : ''}${s.owner ? `<p><b>Who:</b> ${esc(s.owner)}</p>` : ''}
     <ol>${s.steps.map((t) => (typeof t === 'string' ? { text: t } : t)).map((t) => `<li>${esc(t.text)}${t.who ? ` <i>(${esc(t.who)})</i>` : ''}</li>`).join('')}</ol>
-    ${s.notes ? `<p>${esc(s.notes)}</p>` : ''}</div>`).join('');
+    ${s.notes ? `<p>${esc(s.notes)}</p>` : ''}</div>`).join('') + '</div>';
 }
 
 function documents() {
@@ -156,9 +168,8 @@ function supplies() {
 }
 
 function checklists(opts) {
-  const ids = opts.checklistIds;
-  return store.get('checklists').filter((c) => !ids || ids.includes(c.id)).map((c) => `
-    <h2>${esc(c.name)}</h2>
+  return chosenChecklists(opts).map((c) => `
+    <h2 id="cl-${esc(c.id)}">${esc(c.name)}</h2>
     ${tbl([{ label: '✓', raw: true, get: (r) => (r.done ? '&#9745;' : '&#9744;'), w: '6mm' }, { label: 'Item', key: 'text' }, { label: 'Qty / detail', key: 'qty', w: '22%' }, { label: 'Notes', key: 'note', w: '25%' }], c.items)}`).join('');
 }
 
@@ -168,7 +179,7 @@ function kit() {
 }
 
 export function guideHtml(g) {
-  return `<div class="guide">
+  return `<div class="guide" id="fa-${esc(g.id)}">
     <h3>${esc(g.title)}<span class="sev">${esc(SEVERITY[g.sev].label.toUpperCase())}</span></h3>
     <p><i>${esc(g.summary)}</i></p>
     <ol>${g.steps.map((s) => `<li>${s}</li>`).join('')}</ol>
@@ -179,11 +190,9 @@ export function guideHtml(g) {
 }
 
 function firstaid(opts) {
-  const ids = opts.guideIds;
-  const list = GUIDES.filter((g) => !ids || ids.includes(g.id));
   return `<h2>First aid</h2>
   <p class="meta">Summary guidance from NHS, St John Ambulance, British Red Cross and Resuscitation Council UK. Not a substitute for training. In an emergency call 999.</p>
-  ${list.map(guideHtml).join('')}`;
+  <div class="twocol">${chosenGuides(opts).map(guideHtml).join('')}</div>`;
 }
 
 // Resolves a parent / carer link: "p:<id>" is someone in the household, "c:<id>" a contact.
@@ -226,8 +235,23 @@ function cards() {
   return `<h2>Wallet cards</h2>${ppl.map(card).join('')}`;
 }
 
+// The main process fills in the page numbers after a first layout pass:
+// each <!--pg:id-->...<!--/pg--> becomes the page the element with that id lands on.
+function contents(chosen, opts) {
+  const entry = (id, title, cls) => `<li${cls ? ` class="${cls}"` : ''}><a href="#${id}">${esc(title)}</a><span class="dots"></span><!--pg:${id}-->&ndash;<!--/pg--></li>`;
+  return `<nav class="toc"><b>Contents</b><ol>${chosen.map((s) => entry('sec-' + s.id, s.title) + (s.sub ? s.sub(opts).map((x) => entry(x.id, x.title, 'sub')).join('') : '')).join('')}</ol></nav>`;
+}
+
 export function buildDocument(sectionIds, opts = {}) {
-  const parts = SECTIONS.filter((s) => sectionIds.includes(s.id)).map((s, i) => `<section${i && opts.pageBreaks ? ' class="pb"' : ''}>${s.build(opts)}</section>`);
-  return `<!doctype html><html><head><meta charset="utf-8"><title>Emergency Plan</title><style>${CSS}</style></head><body>${parts.join('')}
+  const chosen = SECTIONS.filter((s) => sectionIds.includes(s.id));
+  const parts = chosen.map((s, i) => {
+    const pb = i && (opts.pageBreaks || s.page || chosen[i - 1].page);
+    return `<section id="sec-${s.id}"${pb ? ' class="pb"' : ''}>${s.build(opts)}</section>`;
+  });
+  const hh = store.get('household');
+  return `<!doctype html><html><head><meta charset="utf-8"><title>Emergency Plan</title><style>${CSS}</style></head><body>
+  <h1>Household Emergency Plan</h1>
+  <p class="meta">${esc(hh.name || '')} &middot; Printed ${fmtDate(new Date().toISOString(), true)}</p>
+  ${chosen.length > 1 || chosen.some((s) => s.sub) ? contents(chosen, opts) : ''}${parts.join('')}
   <div class="footer">Holdfast Emergency Planning System &middot; Printed ${fmtDate(new Date().toISOString(), true)} &middot; Review regularly and keep with your important documents.</div></body></html>`;
 }
