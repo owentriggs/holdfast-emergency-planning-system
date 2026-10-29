@@ -42,7 +42,7 @@ export async function render(root) {
             try { const r = await window.api.backup.import(); if (r.ok) { status('Backup imported'); store.reloadFromDisk(); } } catch (e) { status('Import failed: ' + e.message, 8000); }
           } }, icon('import'), 'Import backup...'),
           h('button', { onclick: () => window.api.app.openDataFolder() }, icon('folder-open-outline'), 'Open data folder')),
-        h('div', { class: 'note' }, 'The backup file contains your plan, contacts, supplies, checklists and settings (not cached web pages, map tiles or the document vault). It is not encrypted. To copy everything to a USB stick, with optional password protection, use the USB Backup page.'))),
+        h('div', { class: 'muted small' }, 'Plan data and settings only, not encrypted. For everything, with a password, use USB backup.'))),
       panel('About', h('div', { class: 'small' },
         h('p', null, 'Holdfast Emergency Planning System is a personal household planning tool. Guidance is summarised from GOV.UK Be Ready, Welsh Government, NHS, St John Ambulance, British Red Cross and Resuscitation Council UK.'),
         h('p', null, 'It does not replace official warnings or professional advice. In an emergency call 999.'))))));

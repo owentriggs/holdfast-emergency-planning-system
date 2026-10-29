@@ -54,6 +54,11 @@ export function stat(label, value, cls) {
   return h('div', { class: 'stat ' + (cls || '') }, h('div', { class: 'v' }, value), h('div', { class: 'l' }, label));
 }
 
+// One-line count summary for a panel header. parts: text, or [text, 'warn' | 'bad'] to flag a problem; empty parts are skipped.
+export function summary(...parts) {
+  return h('span', { class: 'summary' }, parts.filter(Boolean).map((p) => (Array.isArray(p) ? h('span', { class: p[1] || '' }, p[0]) : h('span', null, p))));
+}
+
 export function bar(frac, cls) {
   const pct = Math.max(0, Math.min(1, frac || 0)) * 100;
   return h('div', { class: 'bar ' + (cls || '') }, h('i', { style: `width:${pct}%` }));

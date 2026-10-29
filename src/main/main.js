@@ -164,7 +164,7 @@ app.whenReady().then(() => {
 
   Menu.setApplicationMenu(
     Menu.buildFromTemplate([
-      { label: 'File', submenu: [{ label: 'Print centre', accelerator: 'Ctrl+P', click: () => emit('nav', 'print') }, { type: 'separator' }, { role: 'quit' }] },
+      { label: 'File', submenu: [{ label: 'Print...', accelerator: 'Ctrl+P', click: () => emit('nav', 'print') }, { type: 'separator' }, { role: 'quit' }] },
       { label: 'Edit', submenu: [{ role: 'undo' }, { role: 'redo' }, { type: 'separator' }, { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'selectAll' }] },
       { label: 'View', submenu: [{ role: 'reload' }, { role: 'toggleDevTools' }, { type: 'separator' }, { role: 'resetZoom' }, { role: 'zoomIn' }, { role: 'zoomOut' }, { type: 'separator' }, { role: 'togglefullscreen' }] },
     ])

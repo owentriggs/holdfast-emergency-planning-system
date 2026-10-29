@@ -3,25 +3,25 @@ import { h, status, icon, fmtDate, messageBox } from './lib/ui.js';
 
 const PAGES = [
   { group: 'Overview' },
-  { id: 'dashboard', icon: 'view-dashboard-outline', label: 'Dashboard', mod: './pages/dashboard.js' },
+  { id: 'dashboard', icon: 'home-outline', label: 'Home', mod: './pages/dashboard.js' },
   { group: 'Plan' },
-  { id: 'planner', icon: 'clipboard-text-outline', label: 'Emergency Planner', mod: './pages/planner.js' },
-  { id: 'contacts', icon: 'card-account-phone-outline', label: 'Contacts and Numbers', mod: './pages/contacts.js' },
-  { id: 'supplies', icon: 'package-variant-closed', label: 'Supplies and Stock', mod: './pages/supplies.js' },
+  { id: 'planner', icon: 'clipboard-text-outline', label: 'Plan', mod: './pages/planner.js' },
+  { id: 'contacts', icon: 'card-account-phone-outline', label: 'Contacts', mod: './pages/contacts.js' },
+  { id: 'supplies', icon: 'package-variant-closed', label: 'Supplies', mod: './pages/supplies.js' },
   { id: 'checklists', icon: 'format-list-checks', label: 'Checklists', mod: './pages/checklists.js' },
-  { id: 'vault', icon: 'safe-square-outline', label: 'Document Vault', mod: './pages/vault.js' },
+  { id: 'vault', icon: 'safe-square-outline', label: 'Document vault', mod: './pages/vault.js' },
   { group: 'Reference' },
-  { id: 'firstaid', icon: 'medical-bag', label: 'First Aid', mod: './pages/firstaid.js' },
-  { id: 'library', icon: 'bookshelf', label: 'Offline Library', mod: './pages/library.js' },
-  { id: 'radio', icon: 'radio-handheld', label: 'Radio Frequencies', mod: './pages/radio.js' },
+  { id: 'firstaid', icon: 'medical-bag', label: 'First aid', mod: './pages/firstaid.js' },
+  { id: 'library', icon: 'bookshelf', label: 'Library', mod: './pages/library.js' },
+  { id: 'radio', icon: 'radio-handheld', label: 'Radio', mod: './pages/radio.js' },
   { group: 'Situation' },
   { id: 'maps', icon: 'map-outline', label: 'Maps', mod: './pages/maps.js', fill: true },
-  { id: 'weather', icon: 'weather-partly-rainy', label: 'Weather and Warnings', mod: './pages/weather.js' },
+  { id: 'weather', icon: 'weather-partly-rainy', label: 'Weather', mod: './pages/weather.js' },
   { id: 'tools', icon: 'calculator-variant-outline', label: 'Calculators', mod: './pages/tools.js' },
   { group: 'System' },
-  { id: 'print', icon: 'printer-outline', label: 'Print Centre', mod: './pages/print.js', fill: true },
-  { id: 'usb', icon: 'usb-flash-drive-outline', label: 'USB Backup', mod: './pages/usb.js' },
-  { id: 'settings', icon: 'cog-outline', label: 'Settings and Data', mod: './pages/settings.js' },
+  { id: 'print', icon: 'printer-outline', label: 'Print', mod: './pages/print.js', fill: true },
+  { id: 'usb', icon: 'usb-flash-drive-outline', label: 'USB backup', mod: './pages/usb.js' },
+  { id: 'settings', icon: 'cog-outline', label: 'Settings', mod: './pages/settings.js' },
 ];
 
 let current = null;
@@ -33,7 +33,7 @@ function buildNav() {
   list.replaceChildren(...PAGES.map((p) => {
     if (p.group) return h('div', { class: 'navgroup' }, p.group);
     n++;
-    return h('div', { class: 'navitem', dataset: { id: p.id }, onclick: () => go(p.id) }, icon(p.icon), p.label, n <= 9 ? h('span', { class: 'key' }, 'Ctrl+' + n) : null);
+    return h('div', { class: 'navitem', dataset: { id: p.id }, title: n <= 9 ? 'Ctrl+' + n : null, onclick: () => go(p.id) }, icon(p.icon), p.label);
   }));
 }
 
@@ -117,7 +117,7 @@ function usbDrives(list) {
   document.getElementById('navusb').replaceChildren(...presentList.map((d) => {
     const changes = syncList.find((x) => x.drive === d.drive);
     const busy = ejecting.has(d.drive);
-    return h('div', { class: 'usbitem' + (changes ? ' changed' : ''), title: 'Open USB Backup for this drive', onclick: () => go('usb', { drive: d.drive }) },
+    return h('div', { class: 'usbitem' + (changes ? ' changed' : ''), title: 'Open USB backup for this drive', onclick: () => go('usb', { drive: d.drive }) },
       icon('usb-flash-drive'),
       h('div', { class: 't' }, h('b', null, `Holdfast drive (${d.drive})`),
         h('small', null, busy ? 'Ejecting...' : changes ? 'Has changes from another PC' : d.complete ? 'Backup ' + fmtDate(d.created) : 'Unfinished backup')),
@@ -202,9 +202,7 @@ async function boot() {
       }
     }
   });
-  window.api.app.info().then((i) => (document.getElementById('statusright').textContent = 'v' + i.version + '  |  Data: ' + i.dataRoot));
   go((location.hash || '').slice(1) || 'dashboard');
-  status('Ready');
 }
 
 boot();

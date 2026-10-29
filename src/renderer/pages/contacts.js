@@ -7,7 +7,7 @@ const CATS = ['Household', 'Out-of-area contact', 'Family', 'Neighbour', 'Friend
 export function render(root) {
   const contacts = store.get('contacts');
   root.append(
-    h('div', { class: 'grid g21' },
+    h('div', { class: 'stack' },
       panel('Your contacts', editTable([
         { key: 'category', label: 'Category', type: 'select', options: CATS, width: '150px' },
         { key: 'name', label: 'Name', width: '150px' },
@@ -18,12 +18,9 @@ export function render(root) {
         { key: 'notes', label: 'Notes', type: 'textarea' },
         { key: 'ice', label: 'ICE', type: 'checkbox', width: '36px', title: 'In Case of Emergency contact' },
       ], contacts, () => store.save('contacts'), { addLabel: 'Add contact', newRow: () => ({ category: 'Other' }), suggestions: suggestionsFor('contacts'), emptyText: 'No contacts yet.' })),
-      h('div', { class: 'stack' },
-        panel('National numbers (UK)', table([
-          { label: 'Service', key: 'name' },
-          { label: 'Number', get: (r) => h('b', { class: 'mono nowrap' }, r.number) },
-        ], NATIONAL_NUMBERS)),
-        panel('Notes on numbers', h('div', { class: 'small' },
-          NATIONAL_NUMBERS.map((n) => h('p', null, h('b', null, n.number), ' ', n.notes)))),
-        h('div', { class: 'note' }, 'GOV.UK advice: add ICE contacts or Medical ID to everyone\'s phone, keep numbers written on paper for power cuts, and check schools and childcare have your current numbers.'))));
+      panel('National numbers', table([
+        { label: 'Service', key: 'name' },
+        { label: 'Number', get: (r) => h('b', { class: 'mono nowrap' }, r.number) },
+        { label: 'When to use', get: (r) => h('span', { class: 'small muted' }, r.notes) },
+      ], NATIONAL_NUMBERS))));
 }

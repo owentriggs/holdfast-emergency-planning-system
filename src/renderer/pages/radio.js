@@ -48,10 +48,9 @@ export function render(root) {
 
   root.append(h('div', { class: 'grid g2' },
     h('div', { class: 'stack' },
-      panel('My frequencies (printed with the plan)', mineBox),
-      h('div', { class: 'note' }, 'GOV.UK advises writing down the frequencies of the national and local stations you use for news, and keeping a battery or wind-up FM radio. FM frequencies depend on your nearest transmitter: tune in at home and record the exact number here.'),
+      panel('My frequencies', mineBox, h('span', { class: 'muted small' }, 'Printed with the plan')),
       panel('Notes', h('div', { class: 'small' },
-        h('p', null, h('b', null, 'Listening: '), 'In an emergency, local BBC and commercial radio carry official advice. BBC Radio Wales and Radio Cymru cover Wales; BBC Radio 4 and 5 Live are national.'),
+        h('p', null, h('b', null, 'Listening: '), 'FM frequencies depend on your nearest transmitter, so tune in at home and record the exact number. In an emergency, local BBC and commercial radio carry official advice. BBC Radio Wales and Radio Cymru cover Wales; BBC Radio 4 and 5 Live are national.'),
         h('p', null, h('b', null, 'Two-way radio: '), 'PMR446 and CB (27/81 and CEPT) are licence-free in the UK. PMR446 handsets are limited to 0.5 W and typically reach 1 to 3 km in built-up areas. Agree a channel and CTCSS code with your household in advance and record it here.'),
         h('p', null, h('b', null, 'Licensed services: '), 'Amateur bands need an Ofcom licence to transmit. Do not transmit on marine, airband or emergency service frequencies.')))),
     panel('Preset library', presetBox)));

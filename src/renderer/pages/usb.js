@@ -1,5 +1,5 @@
 import * as store from '../lib/store.js';
-import { h, panel, status, fmtDate, fmtBytes, confirmBox, daysUntil, icon, stat, bar } from '../lib/ui.js';
+import { h, panel, status, fmtDate, fmtBytes, confirmBox, daysUntil, icon, bar } from '../lib/ui.js';
 import { SECTIONS, buildDocument } from '../lib/printdoc.js';
 
 const opts = { plan: true, protect: false, pdf: true, vault: true, library: false, tiles: false, app: false };
@@ -152,14 +152,8 @@ export async function render(root, params = {}) {
     const s = store.settings();
     const age = s.lastUsbBackup ? -daysUntil(s.lastUsbBackup.slice(0, 10)) : null;
     return h('div', { class: 'stack' },
-      h('div', { class: 'intro' }, icon('information-outline'), 'Copy your plan, documents and offline data to a USB stick or external drive for your grab bag. Plug the drive in, check what to include, then click "Back up now". Repeat backups only copy what changed.'),
-      h('div', { class: 'stats' },
-        stat('Last backup', s.lastUsbBackup ? fmtDate(s.lastUsbBackup) : 'Never', age == null || age > 30 ? 'warn' : 'ok'),
-        stat('Days since', age == null ? '-' : age, age == null || age > 30 ? 'warn' : 'ok'),
-        stat('Plan data', fmtBytes(est.plan)),
-        stat('Document vault', est.vaultExists ? fmtBytes(est.vault) : 'Not set up'),
-        stat('Offline library', fmtBytes(est.library)),
-        stat('Map tiles', fmtBytes(est.tiles))),
+      h('div', { class: 'row' }, h('span', { class: age == null || age > 30 ? 'pill warn' : 'pill' }, s.lastUsbBackup ? `Last backup ${fmtDate(s.lastUsbBackup)} (${age} day${age === 1 ? '' : 's'} ago)` : 'Never backed up'),
+        h('span', { class: 'muted' }, 'Copies your plan, documents and offline data to a USB drive for your grab bag. Repeat backups only copy what changed.')),
       review ? reviewPanel() : null,
       h('div', { class: 'grid g21' },
         h('div', { class: 'stack' }, drivePanel(), since && !review ? sincePanel() : null, includePanel()),

@@ -7,26 +7,22 @@ const ROLES = ['', 'Adult', 'Parent / carer', 'Child', 'Older person', 'Dependan
 let activeTab = 'household';
 let activeScenario = null;
 
+// Shown above a tab only where it saves a mistake.
 const HELP = {
-  household: 'Who lives here and where. Click any box to type in it; changes save automatically. Give children a parent or carer and their details print on their emergency card.',
-  locations: 'Where to find shut-offs and kit, and how to use them, so anyone in the house can act quickly.',
-  utilities: 'Suppliers, account numbers and emergency lines for gas, electricity, water, phone and insurance.',
-  meeting: 'Where to meet if you are separated or must leave home, and how to get out or get away.',
-  medications: 'Regular medicines for everyone in the household. Rows turn amber when stock is low or a repeat prescription is due.',
-  documents: 'Where the paper originals are kept and whether a copy is in the grab bag. Store scanned copies in the Document Vault.',
-  scenarios: 'Step-by-step actions for each type of emergency. Pre-written from GOV.UK guidance; edit them to suit your home.',
-  review: 'Record plan reviews, drills and real incidents. Aim to review every few months.',
+  household: 'Give children a parent or carer and their details print on their emergency card.',
+  medications: 'Rows turn amber when stock is below the target days or a repeat prescription is due within a week.',
+  documents: 'Where the paper originals are. Keep scanned copies in the Document vault.',
 };
 
 const TABS = [
   { id: 'household', label: 'Household', key: 'household' },
-  { id: 'locations', label: 'Key Locations', key: 'locations' },
-  { id: 'utilities', label: 'Utilities and Accounts', key: 'utilities' },
-  { id: 'meeting', label: 'Meeting Points and Routes', key: 'meeting' },
+  { id: 'locations', label: 'Key locations', key: 'locations' },
+  { id: 'utilities', label: 'Utilities', key: 'utilities' },
+  { id: 'meeting', label: 'Meeting points', key: 'meeting' },
   { id: 'medications', label: 'Medications', key: 'medications' },
   { id: 'documents', label: 'Documents', key: 'documents' },
-  { id: 'scenarios', label: 'Scenario Plans', key: 'scenarios' },
-  { id: 'review', label: 'Review Log', key: 'reviewLog' },
+  { id: 'scenarios', label: 'Scenarios', key: 'scenarios' },
+  { id: 'review', label: 'Review log', key: 'reviewLog' },
 ];
 
 export function render(root, params = {}) {
@@ -48,7 +44,7 @@ export function render(root, params = {}) {
     root.replaceChildren(
       tabs(TABS.map((t) => ({ ...t, count: counts[t.id] })), activeTab, (id) => { activeTab = id; draw(); }),
       body);
-    body.replaceChildren(h('div', { class: 'intro' }, icon('information-outline'), HELP[activeTab]), VIEWS[activeTab]());
+    body.replaceChildren(HELP[activeTab] ? h('div', { class: 'intro' }, HELP[activeTab]) : null, VIEWS[activeTab]());
   };
   draw();
 }
@@ -118,7 +114,7 @@ const VIEWS = {
 
     return h('div', { class: 'stack' },
       h('div', { class: 'grid g2' },
-        panel('Address and location', h('div', { class: 'form' },
+        panel('Address', h('div', { class: 'form' },
           h('label', null, 'Household name'), text('name', 'e.g. The Smith family'),
           h('label', null, 'Address'), area('address'),
           h('label', null, 'Postcode'), h('div', { class: 'row', style: 'flex-wrap:nowrap' }, h('div', { style: 'flex:1' }, text('postcode')), lookup),
@@ -147,7 +143,7 @@ const VIEWS = {
   },
 
   utilities() {
-    return panel('Utilities, suppliers and accounts', editTable([
+    return panel('Utilities and accounts', editTable([
       { key: 'service', label: 'Service', width: '200px' },
       { key: 'provider', label: 'Provider', width: '160px' },
       { key: 'account', label: 'Account / policy no.', width: '160px' },
@@ -163,18 +159,17 @@ const VIEWS = {
         { key: 'type', label: 'Type', type: 'select', options: ['Near home', 'Outside the area', 'Evacuation destination', 'Rest centre', 'Other'], width: '170px' },
         { key: 'name', label: 'Name', width: '160px' },
         { key: 'address', label: 'Address / description', type: 'textarea' },
-        { key: 'lat', label: 'Lat', type: 'number', width: '90px' },
-        { key: 'lon', label: 'Lon', type: 'number', width: '90px' },
+        { key: 'lat', label: 'Lat', type: 'number', width: '90px', title: 'Shown on the map. Maps shows the coordinates under the cursor.' },
+        { key: 'lon', label: 'Lon', type: 'number', width: '90px', title: 'Shown on the map. Maps shows the coordinates under the cursor.' },
         { key: 'notes', label: 'Notes', type: 'textarea' },
       ], store.get('meeting'), save('meeting'), { addLabel: 'Add meeting point', newRow: () => ({ type: 'Other' }), suggestions: suggestionsFor('meeting'), emptyText: 'No meeting points yet.' })),
-      panel('Escape and evacuation routes', editTable([
+      panel('Routes', editTable([
         { key: 'name', label: 'Route', width: '220px' },
         { key: 'from', label: 'From', width: '120px' },
         { key: 'route', label: 'Primary route', type: 'textarea' },
         { key: 'alternative', label: 'Alternative', type: 'textarea' },
         { key: 'notes', label: 'Notes', type: 'textarea' },
-      ], store.get('routes'), save('routes'), { addLabel: 'Add route', suggestions: suggestionsFor('routes'), emptyText: 'No routes yet.' })),
-      h('div', { class: 'note' }, 'Tip: on the Maps page the coordinates under the cursor are shown at the bottom; type them into Lat and Lon to show a meeting point on the map.'));
+      ], store.get('routes'), save('routes'), { addLabel: 'Add route', suggestions: suggestionsFor('routes'), emptyText: 'No routes yet.' })));
   },
 
   medications() {
@@ -198,7 +193,7 @@ const VIEWS = {
   },
 
   documents() {
-    return panel('Important documents register', editTable([
+    return panel('Documents', editTable([
       { key: 'document', label: 'Document', width: '230px' },
       { key: 'holder', label: 'Holder', width: '120px' },
       { key: 'ref', label: 'Reference no.', width: '140px' },
@@ -245,7 +240,7 @@ const VIEWS = {
           h('label', null, 'Name'), h('input', { value: sc.name, oninput: (e) => { sc.name = e.target.value; store.save('scenarios'); side.querySelector('.li.active span').textContent = sc.name; } }),
           h('label', null, 'Trigger / when to use'), h('input', { value: sc.trigger || '', placeholder: 'e.g. Amber flood warning for our area', oninput: (e) => { sc.trigger = e.target.value; store.save('scenarios'); } }),
           h('label', null, 'Responsible'), h('input', { value: sc.owner || '', placeholder: 'Who leads / who does what', oninput: (e) => { sc.owner = e.target.value; store.save('scenarios'); } }))),
-        panel('Actions (in order)', editTable([
+        panel('Actions', editTable([
           { key: 'text', label: 'Action', type: 'textarea' },
           { key: 'who', label: 'Who', width: '120px' },
         ], sc.steps, save('scenarios'), { addLabel: 'Add action', sortable: false, search: false })),
@@ -266,9 +261,9 @@ const VIEWS = {
     return h('div', { class: 'stack' },
       h('div', { class: 'stats' },
         h('div', { class: 'stat' }, h('div', { class: 'v' }, last ? fmtDate(last) : 'Never'), h('div', { class: 'l' }, 'Last plan review')),
-        h('div', { class: 'stat ' + (d == null || d < 0 ? 'bad' : d < 30 ? 'warn' : 'ok') }, h('div', { class: 'v' }, due ? fmtDate(due) : 'Now'), h('div', { class: 'l' }, `Next review due (every ${months} months)`)),
+        h('div', { class: 'stat ' + (d == null || d < 30 ? 'warn' : '') }, h('div', { class: 'v' }, due ? fmtDate(due) : 'Now'), h('div', { class: 'l' }, `Next review due (every ${months} months)`)),
         h('div', { class: 'stat' }, h('div', { class: 'v' }, log.filter((r) => r.type === 'Drill').length), h('div', { class: 'l' }, 'Drills recorded'))),
-      panel('Reviews, drills and incidents', editTable([
+      panel('Log', editTable([
         { key: 'date', label: 'Date', type: 'date', width: '130px' },
         { key: 'type', label: 'Type', type: 'select', options: ['Plan review', 'Drill', 'Kit check', 'Real incident', 'Other'], width: '130px' },
         { key: 'by', label: 'By', width: '130px' },

@@ -97,7 +97,7 @@ export function render(root) {
       h('div', { class: 'stack' },
         panel('Water needed', h('div', { class: 'stack' },
           h('div', { class: 'form' }, ...num(t.water, 'days', 'Days'), ...num(t.water, 'drink', 'Drinking L / person / day', 0.5), ...num(t.water, 'wash', 'Washing L / person / day', 0.5), ...num(t.water, 'pets', 'Pets'), ...num(t.water, 'petLitres', 'L / pet / day', 0.1)),
-          waterOut, h('div', { class: 'note' }, 'GOV.UK: at least 3 litres per person per day for drinking, for 3 days, plus extra for cooking and washing. Household size comes from the Planner.'))),
+          waterOut, h('div', { class: 'note' }, 'GOV.UK: at least 3 litres per person per day for drinking, for 3 days, plus extra for cooking and washing. Household size comes from the Plan page.'))),
         panel('Power bank charges', h('div', { class: 'stack' },
           h('div', { class: 'form' }, ...num(t.bank, 'bankMah', 'Power bank mAh'), ...num(t.bank, 'phoneMah', 'Phone battery mAh'), ...num(t.bank, 'efficiency', 'Real-world efficiency %')),
           bankOut)),

@@ -11,7 +11,7 @@ app.setPath('userData', fs.mkdtempSync(path.join(os.tmpdir(), 'eps-data-')));
 process.env.HOLDFAST_IGNORE_DRIVES = '1'; // never touch a real backup drive that is plugged in
 require('../src/main/main.js');
 
-const PAGES = ['dashboard', 'planner', 'contacts', 'supplies', 'checklists', 'firstaid', 'library', 'radio', 'maps', 'weather', 'tools', 'print', 'settings'];
+const PAGES = ['dashboard', 'planner', 'contacts', 'supplies', 'checklists', 'vault', 'firstaid', 'library', 'radio', 'maps', 'weather', 'tools', 'print', 'usb', 'settings'];
 const errors = [];
 
 app.on('browser-window-created', (_e, win) => {

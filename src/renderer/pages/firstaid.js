@@ -51,7 +51,7 @@ function guides() {
       g.dont && g.dont.length ? h('div', { class: 'sect' }, h('h3', null, 'Do not'), h('ul', null, g.dont.map((s) => h('li', null, s)))) : null,
       g.notes ? h('div', { class: 'callout blue' }, g.notes) : null,
       h('div', { class: 'src' }, 'Sources: ', g.src.map((s, i) => [i ? ', ' : '', h('a', { href: SOURCES[s].url, target: '_blank' }, SOURCES[s].name)]),
-        '. Summary for reference only; not a substitute for first aid training. Cache the source pages in the Offline Library for full detail.'),
+        '. Summary for reference only; not a substitute for first aid training. Cache the source pages in the Library for full detail.'),
     ].filter(Boolean));
   };
 
@@ -67,14 +67,14 @@ function guides() {
           h('option', { value: '' }, 'All'), Object.entries(SEVERITY).map(([k, v]) => h('option', { value: k, selected: sevFilter === k }, v.label)))),
       listEl,
       h('div', { class: 'row', style: 'margin-top:6px' },
-        h('button', { onclick: () => selected.size && window.go('print', { guides: [...selected] }) }, icon('printer'), 'Print selected (', selCount, ')'),
+        h('button', { title: 'Tick guides in the list to print them as a set', onclick: () => selected.size && window.go('print', { guides: [...selected] }) }, icon('printer'), 'Print selected (', selCount, ')'),
         h('button', { onclick: () => window.go('print', { guides: GUIDES.map((g) => g.id) }) }, icon('printer-outline'), 'Print all'),
         h('button', { class: 'small', onclick: () => { selected.clear(); drawList(); selCount.textContent = 0; } }, icon('close'), 'Clear'))),
     h('div', { class: 'body' },
       h('div', { class: 'row', style: 'margin-bottom:6px' },
         h('span', { class: 'big999' }, '999 / 112'), h('span', { class: 'muted' }, 'life-threatening'),
         h('span', { style: 'width:20px' }), h('b', { style: 'font-size:16px' }, '111'), h('span', { class: 'muted' }, 'urgent, not life-threatening'),
-        h('span', { class: 'spacer' }), h('span', { class: 'muted small' }, 'Tick guides on the left to build a printed set.')),
+        h('span', { class: 'spacer' })),
       detail));
 }
 
@@ -87,10 +87,10 @@ function kit() {
     const soon = rows.filter((r) => { const d = daysUntil(r.expiry); return d != null && d >= 0 && d <= 60; }).length;
     const complete = rows.filter((r) => r.target).length ? rows.filter((r) => r.target && (r.qty || 0) >= r.target).length / rows.filter((r) => r.target).length : 0;
     summary.replaceChildren(
-      h('div', { class: 'stat ' + (complete >= 1 ? 'ok' : complete > 0.6 ? 'warn' : 'bad') }, h('div', { class: 'v' }, Math.round(complete * 100) + '%'), h('div', { class: 'l' }, 'Kit complete'), bar(complete, complete >= 1 ? 'ok' : 'warn')),
-      h('div', { class: 'stat ' + (short ? 'warn' : 'ok') }, h('div', { class: 'v' }, short), h('div', { class: 'l' }, 'Items below target')),
-      h('div', { class: 'stat ' + (expired ? 'bad' : 'ok') }, h('div', { class: 'v' }, expired), h('div', { class: 'l' }, 'Expired')),
-      h('div', { class: 'stat ' + (soon ? 'warn' : 'ok') }, h('div', { class: 'v' }, soon), h('div', { class: 'l' }, 'Expiring within 60 days')));
+      h('div', { class: 'stat' }, h('div', { class: 'v' }, Math.round(complete * 100) + '%'), h('div', { class: 'l' }, 'Kit complete'), bar(complete)),
+      h('div', { class: 'stat ' + (short ? 'warn' : '') }, h('div', { class: 'v' }, short), h('div', { class: 'l' }, 'Items below target')),
+      h('div', { class: 'stat ' + (expired ? 'bad' : '') }, h('div', { class: 'v' }, expired), h('div', { class: 'l' }, 'Expired')),
+      h('div', { class: 'stat ' + (soon ? 'warn' : '') }, h('div', { class: 'v' }, soon), h('div', { class: 'l' }, 'Expiring within 60 days')));
   };
   refresh();
   return h('div', { class: 'stack' },
@@ -106,9 +106,8 @@ function kit() {
     ], rows, () => { store.save('firstAidKit'); refresh(); }, {
       addLabel: 'Add item',
       suggestions: suggestionsFor('firstAidKit'),
-      emptyText: 'Kit is empty. The suggestions are based on the NHS recommended home first aid kit.',
+      emptyText: 'Kit is empty. The suggestions are based on the NHS recommended home first aid kit. Check medicines suit each person.',
       rowClass: (r) => { const d = daysUntil(r.expiry); return d != null && d < 0 ? 'bad' : (d != null && d <= 60) || (r.target && (r.qty || 0) < r.target) ? 'warn' : ''; },
       toolbar: h('button', { onclick: () => window.go('print', { sections: ['kit'] }) }, icon('printer'), 'Print inventory'),
-    })),
-    h('div', { class: 'note' }, 'Contents based on the NHS recommended home first aid kit, plus items useful in an extended emergency. Medicines: check suitability and dosage for each person.'));
+    })));
 }

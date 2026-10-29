@@ -47,33 +47,18 @@ export function expiringItems(withinDays = 90) {
 export function render(root) {
   const rows = store.get('supplies');
   const st = store.settings();
-  const covEl = h('div', { class: 'chartbox' });
   const expEl = h('div', { class: 'chartbox' });
   const expTable = h('div');
   const summary = h('div', { class: 'stats' });
-  let covChart, expChart;
+  let expChart;
 
   const refresh = () => {
-    const people = store.householdSize();
     const cov = coverageByCategory();
     const { litres: water, need: waterNeed } = drinkingWater();
     summary.replaceChildren(
-      h('div', { class: 'stat' }, h('div', { class: 'v' }, people), h('div', { class: 'l' }, 'People in household')),
-      h('div', { class: 'stat ' + (water >= waterNeed ? 'ok' : 'bad') }, h('div', { class: 'v' }, `${water} / ${waterNeed} L`), h('div', { class: 'l' }, `Drinking water for ${st.targetDays} days`)),
-      ...Object.entries(cov).map(([k, v]) => h('div', { class: 'stat ' + (v >= st.targetDays ? 'ok' : v >= st.targetDays / 2 ? 'warn' : 'bad') }, h('div', { class: 'v' }, v.toFixed(1) + ' d'), h('div', { class: 'l' }, k + ' coverage'))),
-      h('div', { class: 'stat ' + (expiringItems(30).length ? 'warn' : 'ok') }, h('div', { class: 'v' }, expiringItems(30).length), h('div', { class: 'l' }, 'Expiring within 30 days')));
-
-    const labels = Object.keys(cov);
-    const data = labels.map((k) => +cov[k].toFixed(2));
-    if (covChart) covChart.destroy();
-    covChart = chart(covEl, {
-      type: 'bar',
-      data: { labels, datasets: [
-        { label: 'Days covered', data, backgroundColor: data.map((v) => (v >= st.targetDays ? COLORS.green : v >= st.targetDays / 2 ? COLORS.amber : COLORS.red)) },
-      ] },
-      options: { indexAxis: 'y', plugins: { legend: { display: false }, title: { display: true, text: `Days of supply vs ${st.targetDays}-day target` } }, scales: { x: { beginAtZero: true, suggestedMax: st.targetDays * 2 } } },
-      plugins: [targetLine(st.targetDays)],
-    });
+      h('div', { class: 'stat ' + (water >= waterNeed ? '' : 'warn') }, h('div', { class: 'v' }, `${water} / ${waterNeed} L`), h('div', { class: 'l' }, `Drinking water for ${st.targetDays} days`)),
+      ...Object.entries(cov).map(([k, v]) => h('div', { class: 'stat ' + (v >= st.targetDays ? '' : 'warn') }, h('div', { class: 'v' }, v.toFixed(1) + ' d'), h('div', { class: 'l' }, k + ' coverage'))),
+      h('div', { class: 'stat ' + (expiringItems(30).length ? 'warn' : '') }, h('div', { class: 'v' }, expiringItems(30).length), h('div', { class: 'l' }, 'Expiring within 30 days')));
 
     // Expiry by month for the next 12 months.
     const months = [];
@@ -92,7 +77,7 @@ export function render(root) {
     expChart = chart(expEl, {
       type: 'bar',
       data: { labels: ['Expired', ...months.map((m) => m.toLocaleDateString('en-GB', { month: 'short', year: '2-digit' }))], datasets: [{ label: 'Items expiring', data: [expired, ...counts], backgroundColor: [COLORS.red, ...counts.map((_, i) => (i < 1 ? COLORS.amber : COLORS.blue))] }] },
-      options: { plugins: { legend: { display: false }, title: { display: true, text: 'Items expiring by month (supplies and first aid kit)' } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } },
+      options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } },
     });
 
     expTable.replaceChildren(table([
@@ -116,8 +101,8 @@ export function render(root) {
       { key: 'item', label: 'Item', width: '240px' },
       { key: 'qty', label: 'Qty', type: 'number', width: '70px' },
       { key: 'unit', label: 'Unit', width: '90px', list: 'units' },
-      { key: 'perPersonDay', label: 'Use / person / day', type: 'number', width: '110px', title: 'Leave blank for non-consumables' },
-      { key: 'days', label: 'Days', type: 'ro', num: true, width: '60px', compute: (r) => { const d = coverageDays(r, people()); return d == null ? '' : d.toFixed(1); } },
+      { key: 'perPersonDay', label: 'Use / person / day', type: 'number', width: '110px', title: 'Leave blank for non-consumables. For food, record Qty in person-days and use 1 here.' },
+      { key: 'days', label: 'Days', type: 'ro', num: true, width: '60px', title: 'Qty / (people x use per person per day). Target days are in Settings.', compute: (r) => { const d = coverageDays(r, people()); return d == null ? '' : d.toFixed(1); } },
       { key: 'expiry', label: 'Expiry', type: 'date', width: '125px' },
       { key: 'location', label: 'Stored at', width: '130px' },
       { key: 'notes', label: 'Notes', type: 'textarea' },
@@ -129,29 +114,7 @@ export function render(root) {
       rowClass: (r) => { const d = daysUntil(r.expiry); return d != null && d < 0 ? 'bad' : d != null && d < 30 ? 'warn' : ''; },
     })),
     h('datalist', { id: 'units' }, ['litres', 'person-days', 'each', 'packs', 'tins', 'bottles', 'days', 'kit', 'GBP'].map((u) => h('option', { value: u }))),
-    h('div', { class: 'grid g2' }, panel('Coverage', covEl), panel('Expiry timeline', expEl)),
-    h('div', { style: 'height:10px' }),
-    panel('Expiring within 90 days', expTable),
-    h('div', { class: 'note' }, 'Days = quantity / (people x use per person per day). For food, record quantity in person-days (one person fed for one day) and use per person per day = 1. Target days and water allowance are in Settings.'));
+    h('div', { class: 'grid g2' }, panel('Expiring within 90 days', expTable), panel('Expiry by month', expEl)));
   refresh();
-  return () => { covChart && covChart.destroy(); expChart && expChart.destroy(); };
-}
-
-export function targetLine(target) {
-  return {
-    id: 'target',
-    afterDraw(c) {
-      const x = c.scales.x.getPixelForValue(target);
-      const { top, bottom } = c.chartArea;
-      const ctx = c.ctx;
-      ctx.save();
-      ctx.strokeStyle = COLORS.red;
-      ctx.setLineDash([4, 3]);
-      ctx.beginPath();
-      ctx.moveTo(x, top);
-      ctx.lineTo(x, bottom);
-      ctx.stroke();
-      ctx.restore();
-    },
-  };
+  return () => { expChart && expChart.destroy(); };
 }

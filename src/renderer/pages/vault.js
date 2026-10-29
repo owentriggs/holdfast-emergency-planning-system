@@ -1,5 +1,5 @@
 import * as store from '../lib/store.js';
-import { h, panel, status, fmtDate, fmtBytes, promptForm, confirmBox, daysUntil, icon, stat } from '../lib/ui.js';
+import { h, panel, status, fmtDate, fmtBytes, promptForm, confirmBox, daysUntil, icon, summary } from '../lib/ui.js';
 
 const CATEGORIES = ['Identity', 'Insurance', 'Property', 'Financial', 'Medical', 'Vehicle', 'Legal', 'Family', 'Pets', 'Home inventory', 'Other'];
 
@@ -223,14 +223,6 @@ export async function render(root) {
     });
 
     return h('div', { class: 'stack' },
-      h('div', { class: 'intro' }, icon('information-outline'), 'Encrypted copies of important documents. Click a document to view it or add files. Drop files anywhere on the table to add them.'),
-      h('div', { class: 'stats' },
-        stat('Documents', items.length),
-        stat('Files', nFiles),
-        stat('Stored', fmtBytes(bytes)),
-        stat('Expired', expired, expired ? 'bad' : 'ok'),
-        stat('Expire within 90 days', soon, soon ? 'warn' : 'ok'),
-        stat('Documents with no file', noFile, noFile ? 'warn' : 'ok')),
       h('div', { class: 'grid g21' },
         panel('Documents', h('div', null,
           h('div', { class: 'tbltools' },
@@ -238,7 +230,7 @@ export async function render(root) {
             h('input', { type: 'search', placeholder: 'Filter...', value: query, oninput: (e) => { query = e.target.value; clearTimeout(listView.t); listView.t = setTimeout(draw, 250); } }),
             h('select', { onchange: (e) => { catFilter = e.target.value; draw(); } }, h('option', { value: '' }, 'All categories'), CATEGORIES.map((c) => h('option', { selected: c === catFilter }, c))),
             h('span', { class: 'spacer' }),
-            h('span', { class: 'muted small' }, `${shown.length} of ${items.length}`)),
+            summary(shown.length === items.length ? `${items.length} documents` : `${shown.length} of ${items.length} documents`, `${nFiles} files`, fmtBytes(bytes), expired && [`${expired} expired`, 'bad'], soon && [`${soon} expire within 90 days`, 'warn'], noFile && [`${noFile} with no file`, 'warn'])),
           table),
           h('button', { class: 'primary', onclick: () => window.api.vault.lock() }, icon('lock-outline'), 'Lock now')),
         h('div', { class: 'stack' },

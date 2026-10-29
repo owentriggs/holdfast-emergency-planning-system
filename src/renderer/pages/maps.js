@@ -100,7 +100,7 @@ export async function render(root) {
     h('div', { class: 'row', style: 'margin-bottom:6px' },
       h('select', { onchange: (e) => { st.mapSource = e.target.value; store.save('settings'); setSource(e.target.value); } },
         Object.entries(sources).map(([k, s]) => h('option', { value: k, selected: k === st.mapSource }, s.name))),
-      h('button', { onclick: () => hh.lat ? map.setView([hh.lat, hh.lon], 15) : status('Set the home postcode in the Planner first') }, icon('home-outline'), 'Home'),
+      h('button', { onclick: () => hh.lat ? map.setView([hh.lat, hh.lon], 15) : status('Set the home postcode on the Plan page first') }, icon('home-outline'), 'Home'),
       h('span', { style: 'width:12px' }),
       h('b', null, 'Save for offline:'), maxZ,
       h('button', { class: 'primary', onclick: async () => {

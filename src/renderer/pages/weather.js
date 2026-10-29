@@ -63,7 +63,7 @@ export function render(root) {
     const warn = store.get('warningsCache');
     const flood = store.get('floodCache');
     body.replaceChildren();
-    if (!hh.lat) body.append(h('div', { class: 'note warn' }, 'Set your postcode on the Planner > Household tab to get a local forecast.'));
+    if (!hh.lat) body.append(h('div', { class: 'note warn' }, 'Set your postcode on Plan > Household to get a local forecast.'));
 
     // Warnings
     const warnBody = !warn ? h('div', { class: 'muted' }, 'Not fetched yet.') : warn.items.length
@@ -129,7 +129,7 @@ export function render(root) {
     }
 
     body.append(panel('Flood warnings within 25 km (England only, Environment Agency)' + (flood ? `  (fetched ${fmtDate(flood.at, true)})` : ''),
-      !flood ? h('div', { class: 'muted' }, 'Not fetched yet. In Wales use Natural Resources Wales (add their flood page to the Offline Library) or Floodline 0345 988 1188.')
+      !flood ? h('div', { class: 'muted' }, 'Not fetched yet. In Wales use Natural Resources Wales (add their flood page to the Library) or Floodline 0345 988 1188.')
         : table([
           { label: 'Severity', get: (r) => h('b', { style: r.level <= 2 ? 'color:var(--red)' : 'color:var(--amber)' }, r.severity) },
           { label: 'Area', key: 'area' }, { label: 'Description', key: 'desc' }, { label: 'Updated', get: (r) => fmtDate(r.changed, true) },
