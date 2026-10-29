@@ -1,5 +1,5 @@
 import * as store from './lib/store.js';
-import { h, status, icon } from './lib/ui.js';
+import { h, status, icon, fmtDate, messageBox } from './lib/ui.js';
 
 const PAGES = [
   { group: 'Overview' },
@@ -86,12 +86,52 @@ function footer() {
 window.refreshFooter = footer;
 
 // A backup drive that was edited on another computer is plugged in.
+let syncList = [];
 function syncNote(list) {
+  syncList = list || [];
+  usbDrives();
   const el = document.getElementById('syncnote');
   const d = list && list[0];
   el.replaceChildren(d ? h('button', { class: 'syncnote', title: 'The copy of the program on this drive was used on another computer', onclick: () => go('usb', { review: d.drive }) },
     icon('usb-flash-drive-outline'), `${d.drive} has ${d.usbChanges ? d.usbChanges + ' change(s)' : 'changes'} from another computer. Review`) : '');
 }
+
+// Holdfast backup drives that are plugged in, shown at the bottom of the sidebar with an eject button.
+let presentList = [];
+const ejecting = new Set();
+function usbDrives(list) {
+  if (list) presentList = list;
+  document.getElementById('navusb').replaceChildren(...presentList.map((d) => {
+    const changes = syncList.find((x) => x.drive === d.drive);
+    const busy = ejecting.has(d.drive);
+    return h('div', { class: 'usbitem' + (changes ? ' changed' : ''), title: 'Open USB Backup for this drive', onclick: () => go('usb', { drive: d.drive }) },
+      icon('usb-flash-drive'),
+      h('div', { class: 't' }, h('b', null, `Holdfast drive (${d.drive})`),
+        h('small', null, busy ? 'Ejecting...' : changes ? 'Has changes from another PC' : d.complete ? 'Backup ' + fmtDate(d.created) : 'Unfinished backup')),
+      h('button', { class: 'eject', title: 'Eject so it is safe to remove', disabled: busy, onclick: (e) => { e.stopPropagation(); ejectDrive(d.drive); } }, icon('eject')));
+  }));
+}
+
+export async function ejectDrive(drive) {
+  ejecting.add(drive);
+  usbDrives();
+  status(`Ejecting ${drive}...`, 0);
+  try {
+    await window.api.usb.eject(drive);
+    status(`${drive} ejected`);
+    presentList = presentList.filter((d) => d.drive !== drive);
+    await messageBox('Safe to remove hardware', `The Holdfast drive (${drive}) can now be safely removed from the computer.`, 'check-circle-outline');
+    return true;
+  } catch (e) {
+    status('');
+    await messageBox('Could not eject', String(e.message || e).replace(/^Error invoking remote method '[^']+': (Error: )?/, ''), 'alert-outline');
+    return false;
+  } finally {
+    ejecting.delete(drive);
+    usbDrives();
+  }
+}
+window.ejectDrive = ejectDrive;
 
 function applyTheme() {
   const t = store.settings().theme;
@@ -135,6 +175,8 @@ async function boot() {
   window.api.on('nav', (id) => go(id));
   window.api.on('usb:sync-status', syncNote);
   window.api.usb.syncStatus().then(syncNote, () => {});
+  window.api.on('usb:present', usbDrives);
+  window.api.usb.present().then(usbDrives, () => {});
   document.addEventListener('keydown', (e) => {
     if (e.ctrlKey && !e.shiftKey && !e.altKey && /^[1-9]$/.test(e.key)) {
       const items = PAGES.filter((p) => p.id);

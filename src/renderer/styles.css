@@ -61,6 +61,18 @@ p { margin: 4px 0; }
 .navitem:hover { background: #2d333b; }
 .navitem.active { background: var(--navactive); color: #fff; border-left: 3px solid var(--accent); padding-left: 9px; }
 .navitem .key { margin-left: auto; font-size: 10px; color: #7d8590; }
+#navusb:not(:empty) { padding: 4px 6px; border-top: 1px solid #000; display: flex; flex-direction: column; gap: 4px; }
+.usbitem { display: flex; align-items: center; gap: 6px; padding: 4px 4px 4px 6px; border: 1px solid #3b4552; background: #2a3038; cursor: pointer; }
+.usbitem:hover { background: #313842; }
+.usbitem.changed { border-color: var(--amber); }
+.usbitem > .mdi::before { font-size: 18px; color: var(--accent); }
+.usbitem.changed > .mdi::before { color: var(--amber); }
+.usbitem .t { flex: 1; min-width: 0; line-height: 1.25; }
+.usbitem .t b { display: block; color: #fff; font-size: 11px; }
+.usbitem .t small { display: block; font-size: 10px; color: #9aa4ae; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.usbitem button.eject { padding: 2px 4px; background: transparent; border-color: #3b4552; color: var(--navtext); }
+.usbitem button.eject:hover { background: #3b4552; color: #fff; }
+.usbitem button.eject .mdi { margin-right: 0; }
 .navfoot { padding: 8px 12px; font-size: 10px; color: #7d8590; border-top: 1px solid #000; }
 .navfoot b { color: #fff; }
 

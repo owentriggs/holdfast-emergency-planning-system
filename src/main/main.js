@@ -139,6 +139,14 @@ app.whenReady().then(() => {
       if (found !== lastSync) emit('usb:sync-status', JSON.parse((lastSync = found)));
     } catch (e) { console.error('usb scan', e); }
   }, 5000);
+  // Backup drives being plugged in or removed, for the sidebar.
+  let lastPresent = '[]';
+  setInterval(() => {
+    try {
+      const found = JSON.stringify(usb.present());
+      if (found !== lastPresent) emit('usb:present', JSON.parse((lastPresent = found)));
+    } catch (e) { console.error('usb present', e); }
+  }, 2000);
 
   protocol.handle('app', serveApp);
   protocol.handle('tile', (req) => tiles.handle(req));
@@ -283,23 +291,30 @@ function registerIpc(dataRoot) {
     const p = r.filePaths[0];
     return { path: p, manifest: usb.readManifest(backupRoot(p)) };
   });
-  ipcMain.handle('usb:run', async (_e, target, opts) => {
+  // Eject is refused while a backup, restore or sync is writing to a drive.
+  let usbWriting = 0;
+  const writing = (fn) => async (...a) => { usbWriting++; try { return await fn(...a); } finally { usbWriting--; } };
+  ipcMain.handle('usb:run', writing(async (_e, target, opts) => {
     if (path.resolve(backupRoot(target), 'Data').toLowerCase() === path.resolve(dataRoot).toLowerCase()) throw new Error('The app is running from this backup. Choose a different drive.');
     const pdf = opts.pdfHtml ? await renderPdf(opts.pdfHtml) : null;
     const r = await usb.run(target, { ...opts, pdf });
     store.set('settings', { ...settings(), lastUsbBackup: r.manifest.created, lastUsbTarget: target });
     emit('store:changed', { key: 'settings', value: settings() });
     return r;
-  });
-  ipcMain.handle('usb:restore', (_e, folder, opts) => usb.restore(folder, opts, vault));
+  }));
+  ipcMain.handle('usb:restore', writing((_e, folder, opts) => usb.restore(folder, opts, vault)));
   ipcMain.handle('usb:preview', async (_e, target, choices) => {
     const { plan, vault: v, ...p } = await usb.preview(target, choices);
     return { ...p, vault: { state: v.state, changed: v.changed } };
   });
-  ipcMain.handle('usb:apply', (_e, target, choices) => usb.apply(target, choices));
+  ipcMain.handle('usb:apply', writing((_e, target, choices) => usb.apply(target, choices)));
   ipcMain.handle('usb:syncStatus', () => usb.scan());
+  ipcMain.handle('usb:present', () => usb.present());
   ipcMain.handle('usb:cancel', () => usb.cancel());
-  ipcMain.handle('usb:eject', (_e, id) => usb.eject(id));
+  ipcMain.handle('usb:eject', (_e, id) => {
+    if (usbWriting) throw new Error('A backup is still being written. Wait for it to finish, then eject.');
+    return usb.eject(id);
+  });
   ipcMain.handle('usb:openFolder', (_e, p) => shell.openPath(fs.existsSync(backupRoot(p)) ? backupRoot(p) : p));
 
   // Backup

@@ -159,8 +159,9 @@ export async function render(root, params = {}) {
         h('td', null, d.manifest ? h('span', { class: 'pill ' + (d.manifest.complete ? 'ok' : 'warn') }, (d.manifest.complete ? 'Backup ' : 'Unfinished backup ') + fmtDate(d.manifest.created || d.manifest.started, true)) : h('span', { class: 'muted' }, 'none')),
         h('td', { class: 'act' }, d.removable ? h('button', { title: 'Eject so it is safe to unplug', onclick: async (e) => {
           e.stopPropagation();
-          try { await window.api.usb.eject(d.id); status(`${d.id} ejected. It is safe to unplug.`, 8000); } catch (er) { status('Eject failed: ' + errMsg(er), 8000); }
-          setTimeout(async () => { await loadDrives(); draw(); }, 1500);
+          await window.ejectDrive(d.id);
+          await loadDrives();
+          draw();
         } }, icon('eject-outline')) : null));
     });
     const custom = target && !target.drive;
@@ -295,11 +296,11 @@ export async function render(root, params = {}) {
 
   await loadDrives();
   if (params.path) target = { path: params.path, label: params.path };
-  if (params.review) {
-    const d = drives.find((x) => x.id === params.review);
+  if (params.review || params.drive) {
+    const d = drives.find((x) => x.id === (params.review || params.drive));
     if (d) target = { path: d.root, label: `${d.id} ${d.label}`, drive: d };
   }
-  if (target && (params.review || params.path || (target.drive && target.drive.manifest))) await loadReview(target.path);
+  if (target && (params.review || params.drive || params.path || (target.drive && target.drive.manifest))) await loadReview(target.path);
   // A drive edited elsewhere was plugged in while this page is open.
   offs.push(window.api.on('usb:sync-status', async (list) => {
     if (busy || review || !list.length) return;
@@ -307,6 +308,8 @@ export async function render(root, params = {}) {
     const d = drives.find((x) => x.id === list[0].drive);
     if (d) { target = { path: d.root, label: `${d.id} ${d.label}`, drive: d }; await loadReview(d.root); draw(); }
   }));
+  // A drive was plugged in, removed or ejected from the sidebar.
+  offs.push(window.api.on('usb:present', async () => { if (!busy) { await loadDrives(); draw(); } }));
   draw();
   return () => offs.forEach((f) => f());
 }

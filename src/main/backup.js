@@ -388,10 +388,29 @@ class UsbBackup {
     return { ok: true, restored: done, savedTo: fs.existsSync(saved) ? saved : null };
   }
 
+  // Drives plugged in now that hold a Holdfast backup. Cheap enough to run every couple of seconds.
+  present() {
+    const out = [];
+    for (let c = 68; c <= 90; c++) {
+      const drive = String.fromCharCode(c) + ':';
+      if (this.dataRoot.toUpperCase().startsWith(drive)) continue;
+      const root = backupRoot(drive + path.sep);
+      try { if (!fs.existsSync(path.join(root, 'backup.json'))) continue; } catch (e) { continue; }
+      const m = this.readManifest(root);
+      out.push({ drive, created: (m && (m.created || m.started)) || null, complete: !!(m && m.complete) });
+    }
+    return out;
+  }
+
+  // Windows' "Eject" verb returns at once and may silently refuse (files in use), so wait until the drive has actually gone.
   async eject(driveId) {
     if (!/^[A-Z]:$/i.test(driveId)) throw new Error('Bad drive');
     await ps(`(New-Object -ComObject Shell.Application).Namespace(17).ParseName('${driveId}').InvokeVerb('Eject')`);
-    return true;
+    for (let i = 0; i < 40; i++) {
+      if (!fs.existsSync(driveId + path.sep)) return true;
+      await new Promise((r) => setTimeout(r, 250));
+    }
+    throw new Error(`Windows could not eject ${driveId}. Close any files or windows using it and try again.`);
   }
 }
 

@@ -150,6 +150,21 @@ export function confirmBox(msg, okLabel = 'OK', danger = false) {
   });
 }
 
+// In-page message with a single OK button. iconName is an MDI icon shown beside the title.
+export function messageBox(title, msg, iconName) {
+  return new Promise((resolve) => {
+    const ok = h('button', { class: 'primary', onclick: () => dlg.close() }, 'OK');
+    const dlg = h('dialog', null,
+      h('div', { class: 'dh' }, iconName ? [icon(iconName), ' '] : null, title),
+      h('div', { class: 'db', style: 'max-width:460px' }, msg),
+      h('div', { class: 'df' }, ok));
+    dlg.addEventListener('close', () => { setTimeout(() => dlg.remove(), 0); resolve(); });
+    document.body.appendChild(dlg);
+    dlg.showModal();
+    ok.focus();
+  });
+}
+
 /*
  Editable table.
  columns: [{ key, label, type: text|number|date|select|textarea|checkbox|ro, options, width, compute(row), cls(row) }]
