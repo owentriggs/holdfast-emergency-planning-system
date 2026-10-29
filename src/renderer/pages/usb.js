@@ -248,7 +248,7 @@ export async function render(root, params = {}) {
         h('span', { class: 'spacer' }),
         target ? h('button', { onclick: () => window.api.usb.openFolder(target.path) }, icon('folder-open-outline'), 'Open') : null),
       progBar, progText,
-      h('div', { class: 'note' }, target ? `Saves into "${target.path.replace(/\\$/, '')}\\EPS Backup". An earlier backup there is updated.` : 'Choose a drive above.')));
+      h('div', { class: 'note' }, target ? `Saves into "${target.path.replace(/\\$/, '')}\\Holdfast Backup". An earlier backup there is updated.` : 'Choose a drive above.')));
   }
 
   function restorePanel() {
@@ -258,7 +258,7 @@ export async function render(root, params = {}) {
     const pw = h('input', { type: 'password', placeholder: 'Backup password' });
     const chk = (k, label) => c[k] ? h('label', { class: 'chk' }, h('input', { type: 'checkbox', checked: sel[k], onchange: (e) => (sel[k] = e.target.checked) }), label, c[k].fromEarlier ? h('span', { class: 'muted small' }, ` (from ${fmtDate(c[k].fromEarlier)})`) : '') : null;
     const pick = async () => {
-      const r = await window.api.usb.chooseFolder('Choose the backup drive or its "EPS Backup" folder');
+      const r = await window.api.usb.chooseFolder('Choose the backup drive or its "Holdfast Backup" folder');
       if (!r) return;
       if (!r.manifest) return status('No backup found there', 8000);
       restoreFrom = r;

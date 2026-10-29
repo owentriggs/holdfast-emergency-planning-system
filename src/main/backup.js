@@ -1,12 +1,12 @@
 // Backup to a USB stick or external drive, and restore from one.
 //
-// Layout written to <target>/EPS Backup:
+// Layout written to <target>/Holdfast Backup (backups made before the rename used "EPS Backup"; they are still read and get renamed on the next backup):
 //   README.txt                       what is here and how to use it
 //   Emergency plan <date>.pdf        optional, readable on any computer
 //   backup.json                      manifest, written last ("complete": true)
 //   Data/data/*.json                 plan data (or Data/plan.epsenc when protected with a password)
 //   Data/vault, Data/webcache, Data/tiles
-//   Start Emergency Planning System  optional copy of the program: the portable .exe itself, or a .cmd launcher for App/
+//   Start Holdfast                   optional copy of the program: the portable .exe itself, or a .cmd launcher for App/
 //   App/                             the installed program's files, when copied from an installed app
 //
 // Folders are synced: unchanged files (same size and modified time) are skipped, files no longer present are removed,
@@ -19,8 +19,20 @@ const path = require('path');
 const { seal, open, scrypt, KDF, MAXMEM } = require('./vault');
 const { mergePlan, SKIP_KEYS } = require('./merge');
 
-const FOLDER = 'EPS Backup';
-const LAUNCHER = 'Start Emergency Planning System';
+const FOLDER = 'Holdfast Backup';
+const LAUNCHER = 'Start Holdfast';
+const PORTABLE = 'holdfast-portable.json';
+// Names used before the app was renamed to Holdfast.
+const LEGACY = { folder: 'EPS Backup', launcher: 'Start Emergency Planning System', portable: 'eps-portable.json' };
+
+// The backup folder for a drive or folder: the folder itself if given, otherwise the current name, or the old name if only that exists.
+function backupRoot(target) {
+  const base = path.basename(target);
+  if (base === FOLDER || base === LEGACY.folder) return target;
+  const now = path.join(target, FOLDER);
+  const old = path.join(target, LEGACY.folder);
+  return !fs.existsSync(now) && fs.existsSync(old) ? old : now;
+}
 const DRIVE_TYPES = { 2: 'Removable', 3: 'Local disk', 4: 'Network', 5: 'CD/DVD' };
 
 function ps(command) {
@@ -68,7 +80,7 @@ class UsbBackup {
       return {
         id: d.DeviceID, root, label: d.VolumeName || '', size: Number(d.Size), free: Number(d.FreeSpace), fs: d.FileSystem || '',
         type: DRIVE_TYPES[d.DriveType] || 'Other', removable: d.DriveType === 2,
-        manifest: this.readManifest(path.join(root, FOLDER)),
+        manifest: this.readManifest(backupRoot(root)),
       };
     });
   }
@@ -125,15 +137,20 @@ class UsbBackup {
   // opts: { plan, password, vault, library, tiles, app, pdf: Buffer|null }
   async run(target, opts) {
     this.cancelled = false;
-    const root = path.join(target, FOLDER);
-    const data = path.join(root, 'Data');
-    fs.mkdirSync(data, { recursive: true });
+    let root = backupRoot(target);
     const old = this.readManifest(root);
     // Never overwrite changes made on the drive (by the program copy on another computer) without asking.
     if (old && (opts.plan || opts.vault) && !opts.overwrite && this.editedSince(root, old)) {
       const p = await this.preview(target);
       if (p.usbChanges || p.vault.state === 'locked') throw new Error(`USB_HAS_CHANGES: The drive has ${p.usbChanges || 'some'} change(s) made on another computer. Review them first.`);
     }
+    // A backup made before the rename: give its folder the new name.
+    if (path.basename(root) === LEGACY.folder) {
+      const renamed = path.join(path.dirname(root), FOLDER);
+      try { fs.renameSync(root, renamed); root = renamed; } catch (e) { /* in use: keep writing to the old folder */ }
+    }
+    const data = path.join(root, 'Data');
+    fs.mkdirSync(data, { recursive: true });
     const id = (old && old.id) || crypto.randomBytes(8).toString('hex');
     // Mark as in progress until the manifest is rewritten at the end.
     fs.writeFileSync(path.join(root, 'backup.json'), JSON.stringify({ ...(old || {}), complete: false, started: new Date().toISOString() }, null, 1));
@@ -173,15 +190,17 @@ class UsbBackup {
           // The portable build is one exe: put it at the top of the backup folder, next to the data.
           this.progress({ phase: 'Program', done: 0, total: 1, file: path.basename(src.path) });
           await fs.promises.copyFile(src.path, path.join(root, LAUNCHER + '.exe'));
-          fs.writeFileSync(path.join(root, 'eps-portable.json'), JSON.stringify({ dataDir: 'Data' }, null, 1));
+          fs.writeFileSync(path.join(root, PORTABLE), JSON.stringify({ dataDir: 'Data' }, null, 1));
           fs.rmSync(path.join(root, LAUNCHER + '.cmd'), { force: true });
         } else {
           // An installed copy is a folder of support files. Keep them in App and put a launcher at the top.
           const dest = path.join(root, 'App');
           await this.sync(src.path, dest, 'Program', /^Uninstall .*\.exe$/i);
-          fs.writeFileSync(path.join(dest, 'eps-portable.json'), JSON.stringify({ dataDir: '../Data' }, null, 1));
+          fs.writeFileSync(path.join(dest, PORTABLE), JSON.stringify({ dataDir: '../Data' }, null, 1));
+          fs.rmSync(path.join(dest, LEGACY.portable), { force: true });
           fs.writeFileSync(path.join(root, LAUNCHER + '.cmd'), `@start "" "%~dp0App\\${path.basename(process.execPath)}"\r\n`);
         }
+        for (const f of [LEGACY.launcher + '.exe', LEGACY.launcher + '.cmd', LEGACY.portable]) fs.rmSync(path.join(root, f), { force: true });
         contents.app = { version: this.app.getVersion(), kind: src.kind };
       }
     }
@@ -241,9 +260,9 @@ class UsbBackup {
     return files.some((f) => { try { return fs.statSync(f).mtimeMs > since; } catch (e) { return false; } });
   }
 
-  // Compares the drive with this computer. target: drive root, or the "EPS Backup" folder itself.
+  // Compares the drive with this computer. target: drive root, or the backup folder itself.
   async preview(target, choices = {}) {
-    const root = path.basename(target) === FOLDER ? target : path.join(target, FOLDER);
+    const root = backupRoot(target);
     const m = this.readManifest(root);
     const base = this.loadBase(m && m.id);
     const out = { root, manifest: m, hasBase: !!base.plan, edited: this.editedSince(root, m), changes: [], usbChanges: 0, pcChanges: 0, vault: { state: 'none' } };
@@ -302,7 +321,7 @@ class UsbBackup {
     for (let c = 68; c <= 90; c++) {
       const drive = String.fromCharCode(c) + ':';
       if (this.dataRoot.toUpperCase().startsWith(drive)) continue;
-      const root = path.join(drive + path.sep, FOLDER);
+      const root = backupRoot(drive + path.sep);
       let m;
       try { if (!fs.existsSync(path.join(root, 'backup.json'))) continue; m = this.readManifest(root); } catch (e) { continue; }
       if (!m || !m.complete || !this.editedSince(root, m)) continue;
@@ -339,9 +358,9 @@ class UsbBackup {
 
   // opts: { plan, vault, library, tiles, password }. Current data is copied to <userData>/before-restore-<time> first.
   async restore(root, opts, vault) {
-    if (path.basename(root) !== FOLDER && fs.existsSync(path.join(root, FOLDER))) root = path.join(root, FOLDER);
+    root = backupRoot(root);
     const m = this.readManifest(root);
-    if (!m || m.format !== 'eps-backup-folder') throw new Error('No Emergency Planning System backup found in that folder');
+    if (!m || m.format !== 'eps-backup-folder') throw new Error('No Holdfast backup found in that folder');
     const saved = path.join(this.dataRoot, 'before-restore-' + new Date().toISOString().replace(/[:.]/g, '-'));
     const done = [];
     let plan = null;
@@ -378,7 +397,7 @@ class UsbBackup {
 
 function readme(c) {
   const lines = [
-    'EMERGENCY PLANNING SYSTEM BACKUP',
+    'HOLDFAST EMERGENCY PLANNING SYSTEM BACKUP',
     `Made ${new Date().toLocaleString('en-GB')}`,
     '',
     'What is here:',
@@ -387,13 +406,13 @@ function readme(c) {
     c.vault ? '- Data\\vault: the document vault. Encrypted; opens with the vault password or recovery code.' : null,
     c.library ? '- Data\\webcache: saved web pages for the offline library.' : null,
     c.tiles ? '- Data\\tiles: offline map tiles.' : null,
-    c.app ? '- "Start Emergency Planning System": double-click it on any Windows PC to run the program from this drive. It opens this backup directly.' : null,
+    c.app ? '- "Start Holdfast": double-click it on any Windows PC to run the program from this drive. It opens this backup directly.' : null,
     '',
-    'To restore on another computer: install or run Emergency Planning System, open "USB Backup", click "Restore from a backup" and choose this folder.',
+    'To restore on another computer: install or run Holdfast Emergency Planning System, open "USB Backup", click "Restore from a backup" and choose this folder.',
     '',
     'Keep this drive somewhere safe, for example in your grab bag. Anyone who has it can read any part that is not password protected.',
   ];
   return lines.filter((l) => l != null).join('\r\n');
 }
 
-module.exports = { UsbBackup, FOLDER };
+module.exports = { UsbBackup, FOLDER, PORTABLE, LEGACY, backupRoot };

@@ -296,7 +296,7 @@ class Vault {
 
   // Copy the encrypted vault folder somewhere else (still encrypted, needs the same password).
   backupTo(target) {
-    const dest = path.join(target, `eps-vault-${new Date().toISOString().slice(0, 10)}`);
+    const dest = path.join(target, `holdfast-vault-${new Date().toISOString().slice(0, 10)}`);
     fs.cpSync(this.dir, dest, { recursive: true, filter: (src) => !src.endsWith('.tmp') });
     return dest;
   }

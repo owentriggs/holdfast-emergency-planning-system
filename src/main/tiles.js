@@ -14,7 +14,7 @@ const SOURCES = {
   },
 };
 
-const UA = 'EmergencyPlanningSystem/0.1 (personal offline household planner)';
+const UA = 'Holdfast/0.2 (personal offline household planner)';
 const AREA_TILE_CAP = 3000;
 
 class Tiles {

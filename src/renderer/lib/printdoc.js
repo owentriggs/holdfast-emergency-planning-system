@@ -229,5 +229,5 @@ function cards() {
 export function buildDocument(sectionIds, opts = {}) {
   const parts = SECTIONS.filter((s) => sectionIds.includes(s.id)).map((s, i) => `<section${i && opts.pageBreaks ? ' class="pb"' : ''}>${s.build(opts)}</section>`);
   return `<!doctype html><html><head><meta charset="utf-8"><title>Emergency Plan</title><style>${CSS}</style></head><body>${parts.join('')}
-  <div class="footer">Emergency Planning System &middot; Printed ${fmtDate(new Date().toISOString(), true)} &middot; Review regularly and keep with your important documents.</div></body></html>`;
+  <div class="footer">Holdfast Emergency Planning System &middot; Printed ${fmtDate(new Date().toISOString(), true)} &middot; Review regularly and keep with your important documents.</div></body></html>`;
 }

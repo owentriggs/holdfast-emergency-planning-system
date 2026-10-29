@@ -1,10 +1,12 @@
 <p align="center">
-  <img src="src/assets/logo.svg" alt="Emergency Planning System logo" width="120">
+  <img src="src/assets/logo.svg" alt="Holdfast logo" width="120">
 </p>
 
-<h1 align="center">Emergency Planning System</h1>
+<h1 align="center">Holdfast</h1>
 
-A Windows desktop app for planning how your household copes with an emergency: power cuts, floods, storms, fire, evacuation, or being cut off for a few days. It follows UK Government (GOV.UK "Be Ready") and Welsh Government guidance and is built to keep working when the internet does not.
+<p align="center"><b>Emergency planning system for your household</b></p>
+
+Holdfast is a Windows desktop app for planning how your household copes with an emergency: power cuts, floods, storms, fire, evacuation, or being cut off for a few days. It follows UK Government (GOV.UK "Be Ready") and Welsh Government guidance and is built to keep working when the internet does not.
 
 It is a utility, not a website: dense tables, clear charts, everything saves automatically, and everything can be printed.
 
@@ -12,12 +14,12 @@ It is a utility, not a website: dense tables, clear charts, everything saves aut
 
 ## Download
 
-**[Download the latest release](https://github.com/owentriggs/emergency-planning-system/releases/latest)** (Windows 10 or 11, 64-bit)
+**[Download the latest release](https://github.com/owentriggs/holdfast-emergency-planning-system/releases/latest)** (Windows 10 or 11, 64-bit)
 
 | File | Use it if |
 | --- | --- |
-| `Emergency.Planning.System.Setup.<version>.exe` | You want it installed with a Start menu shortcut. |
-| `Emergency.Planning.System.<version>.exe` | You want the portable version: no install, runs from anywhere, including a USB stick. |
+| `Holdfast.Emergency.Planning.System.Setup.<version>.exe` | You want it installed with a Start menu shortcut. |
+| `Holdfast.Emergency.Planning.System.<version>.exe` | You want the portable version: no install, runs from anywhere, including a USB stick. |
 
 The files are not code-signed, so Windows SmartScreen may say it "protected your PC". Click **More info**, then **Run anyway**. The release notes list SHA-256 hashes so you can check your download (`Get-FileHash .\<file>.exe` in PowerShell).
 
@@ -81,13 +83,13 @@ Plug in a USB stick or external drive and open **USB Backup**. Choose the drive,
 | Printable plan (PDF) | Readable on any computer or phone without the app. |
 | Document vault | Copied still encrypted. |
 | Offline library and map tiles | Can be large. Repeat backups only copy what changed. |
-| Copy of this program | Double-click `Start Emergency Planning System` on the stick to run the app on any Windows PC, using the data on the stick. |
+| Copy of this program | Double-click `Start Holdfast` on the stick to run the app on any Windows PC, using the data on the stick. |
 
 The drive ends up looking like this:
 
 ```
-EPS Backup\
-  Start Emergency Planning System   (runs the app from the stick)
+Holdfast Backup\
+  Start Holdfast                    (runs the app from the stick)
   Emergency plan <date>.pdf
   README.txt
   Data\                             (your data)
@@ -106,7 +108,7 @@ Eject the drive with the **Eject** button before unplugging it.
 
 ## Where data is stored
 
-Everything lives under `%APPDATA%\emergency-planning-system\`:
+Everything lives under `%APPDATA%\Holdfast Emergency Planning System\`. Versions before the rename used `%APPDATA%\Emergency Planning System\`; that folder is moved across automatically the first time Holdfast starts.
 
 | Folder | Contents |
 | --- | --- |
@@ -145,6 +147,7 @@ Each test runs the real app against a throwaway data folder:
 | `npx electron scripts/edit-test.js` | Typing into the planner, the delete confirmation, and data migration. |
 | `npx electron scripts/vault-test.js` | Vault encryption on disk, previews, locking, wrong password and the recovery code. |
 | `npx electron scripts/usb-test.js` | Parent and carer details on wallet cards; USB backup and restore into a temp folder. |
+| `npx electron scripts/rename-test.js` | Moving data from the old "Emergency Planning System" folder, and finding and renaming old "EPS Backup" folders on USB drives. |
 | `npx electron scripts/sync-test.js` | Two-way sync: edits on the drive and on the PC, conflicts, and vault documents added elsewhere. |
 
 ## Project layout

@@ -34,7 +34,7 @@ app.on('browser-window-created', (_e, win) => {
       const e1 = await js(`window.api.vault.saveEntry({ name: 'Passport', category: 'Identity' })`);
       await js(`window.api.vault.addFiles('${e1.id}', [{ name: 'passport.txt', type: 'text/plain', data: new TextEncoder().encode('PASSPORT') }])`);
       await js(`window.api.usb.run(${T}, { plan: true, vault: true })`);
-      const root = path.join(target, 'EPS Backup');
+      const root = path.join(target, 'Holdfast Backup');
       check('Backup has an id and this PC kept a base', !!JSON.parse(fs.readFileSync(path.join(root, 'backup.json'))).id && fs.readdirSync(path.join(dataDir, 'sync-bases')).length === 2);
       check('Unedited drive: nothing to review', (await js(`window.api.usb.preview(${T})`)).usbChanges === 0);
       await wait(2500);

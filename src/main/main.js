@@ -6,17 +6,35 @@ const { Store } = require('./store');
 const { WebCache } = require('./webcache');
 const { Tiles } = require('./tiles');
 const { Vault } = require('./vault');
-const { UsbBackup, FOLDER: BACKUP_FOLDER } = require('./backup');
+const { UsbBackup, PORTABLE, LEGACY, backupRoot } = require('./backup');
 
-// A copy of the program made by "USB Backup" carries eps-portable.json and keeps its data on the same drive.
+// A copy of the program made by "USB Backup" carries holdfast-portable.json (eps-portable.json before the rename)
+// and keeps its data on the same drive.
 // Chromium's own cache stays on the computer so the drive only holds the user's data.
 if (app.isPackaged) {
   const exeDir = process.env.PORTABLE_EXECUTABLE_DIR || path.dirname(process.execPath);
   try {
-    const cfg = JSON.parse(fs.readFileSync(path.join(exeDir, 'eps-portable.json'), 'utf8'));
+    const file = [PORTABLE, LEGACY.portable].map((f) => path.join(exeDir, f)).find((f) => fs.existsSync(f));
+    const cfg = JSON.parse(fs.readFileSync(file, 'utf8'));
     app.setPath('userData', path.resolve(exeDir, cfg.dataDir));
-    app.setPath('sessionData', path.join(app.getPath('temp'), 'eps-portable-session'));
+    app.setPath('sessionData', path.join(app.getPath('temp'), 'holdfast-portable-session'));
   } catch (e) { /* normal install */ }
+}
+
+// The app was called "Emergency Planning System" before it became Holdfast. On first run after the rename, move the
+// data folder across. Only for the default location (not portable copies or tests that set their own folder). If the
+// old folder cannot be moved (for example the old version is still open), keep using it where it is.
+{
+  const now = app.getPath('userData');
+  const old = path.join(app.getPath('appData'), 'Emergency Planning System');
+  if (now === path.join(app.getPath('appData'), app.getName()) && now !== old && !fs.existsSync(path.join(now, 'data')) && fs.existsSync(path.join(old, 'data'))) {
+    try {
+      if (fs.existsSync(now)) fs.rmdirSync(now); // only succeeds if empty
+      fs.renameSync(old, now);
+    } catch (e) {
+      app.setPath('userData', old);
+    }
+  }
 }
 
 protocol.registerSchemesAsPrivileged([
@@ -58,7 +76,7 @@ function createWindow() {
     height: st.winH || 900,
     minWidth: 1000,
     minHeight: 640,
-    title: 'Emergency Planning System',
+    title: 'Holdfast Emergency Planning System',
     icon: path.join(ASSETS, 'icon.ico'),
     backgroundColor: '#f3f3f3',
     webPreferences: {
@@ -175,7 +193,7 @@ function registerIpc(dataRoot) {
 
   ipcMain.handle('net:get', async (_e, url, as = 'json') => {
     if (!/^https:\/\//.test(url)) throw new Error('Only https URLs are allowed');
-    const res = await net.fetch(url, { headers: { 'User-Agent': 'EmergencyPlanningSystem/0.1', Accept: as === 'json' ? 'application/json' : '*/*' } });
+    const res = await net.fetch(url, { headers: { 'User-Agent': 'Holdfast/0.2', Accept: as === 'json' ? 'application/json' : '*/*' } });
     if (!res.ok) throw new Error(`HTTP ${res.status} from ${new URL(url).host}`);
     return as === 'json' ? res.json() : res.text();
   });
@@ -263,10 +281,10 @@ function registerIpc(dataRoot) {
     const r = await dialog.showOpenDialog(win, { title, properties: ['openDirectory', 'createDirectory'] });
     if (r.canceled) return null;
     const p = r.filePaths[0];
-    return { path: p, manifest: usb.readManifest(path.basename(p) === BACKUP_FOLDER ? p : path.join(p, BACKUP_FOLDER)) };
+    return { path: p, manifest: usb.readManifest(backupRoot(p)) };
   });
   ipcMain.handle('usb:run', async (_e, target, opts) => {
-    if (path.resolve(target, BACKUP_FOLDER, 'Data').toLowerCase() === path.resolve(dataRoot).toLowerCase()) throw new Error('The app is running from this backup. Choose a different drive.');
+    if (path.resolve(backupRoot(target), 'Data').toLowerCase() === path.resolve(dataRoot).toLowerCase()) throw new Error('The app is running from this backup. Choose a different drive.');
     const pdf = opts.pdfHtml ? await renderPdf(opts.pdfHtml) : null;
     const r = await usb.run(target, { ...opts, pdf });
     store.set('settings', { ...settings(), lastUsbBackup: r.manifest.created, lastUsbTarget: target });
@@ -282,11 +300,11 @@ function registerIpc(dataRoot) {
   ipcMain.handle('usb:syncStatus', () => usb.scan());
   ipcMain.handle('usb:cancel', () => usb.cancel());
   ipcMain.handle('usb:eject', (_e, id) => usb.eject(id));
-  ipcMain.handle('usb:openFolder', (_e, p) => shell.openPath(fs.existsSync(path.join(p, BACKUP_FOLDER)) ? path.join(p, BACKUP_FOLDER) : p));
+  ipcMain.handle('usb:openFolder', (_e, p) => shell.openPath(fs.existsSync(backupRoot(p)) ? backupRoot(p) : p));
 
   // Backup
   ipcMain.handle('backup:export', async () => {
-    const r = await dialog.showSaveDialog(win, { title: 'Export backup', defaultPath: `eps-backup-${new Date().toISOString().slice(0, 10)}.json`, filters: [{ name: 'JSON', extensions: ['json'] }] });
+    const r = await dialog.showSaveDialog(win, { title: 'Export backup', defaultPath: `holdfast-backup-${new Date().toISOString().slice(0, 10)}.json`, filters: [{ name: 'JSON', extensions: ['json'] }] });
     if (r.canceled) return { ok: false };
     fs.writeFileSync(r.filePath, JSON.stringify({ format: 'eps-backup', version: 1, exportedAt: new Date().toISOString(), data: store.all() }, null, 1));
     return { ok: true, path: r.filePath };
@@ -295,7 +313,7 @@ function registerIpc(dataRoot) {
     const r = await dialog.showOpenDialog(win, { title: 'Import backup', filters: [{ name: 'JSON', extensions: ['json'] }], properties: ['openFile'] });
     if (r.canceled) return { ok: false };
     const obj = JSON.parse(fs.readFileSync(r.filePaths[0], 'utf8'));
-    if (obj.format !== 'eps-backup' || !obj.data) throw new Error('Not an Emergency Planning System backup file');
+    if (obj.format !== 'eps-backup' || !obj.data) throw new Error('Not a Holdfast backup file');
     store.replaceAll(obj.data);
     return { ok: true };
   });

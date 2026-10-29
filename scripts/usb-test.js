@@ -60,7 +60,7 @@ app.on('browser-window-created', (_e, win) => {
       check('Drive list loads', await js(`window.api.usb.drives().then((d) => Array.isArray(d), () => false)`));
       const pdfHtml = await js(`import('app://ui/lib/printdoc.js').then((m) => m.buildDocument(m.SECTIONS.map((s) => s.id)))`);
       const r1 = await js(`window.api.usb.run(${JSON.stringify(target)}, { plan: true, password: 'backup pass 1', vault: true, library: true, tiles: false, app: false, pdfHtml: ${JSON.stringify(pdfHtml)} })`);
-      const root = path.join(target, 'EPS Backup');
+      const root = path.join(target, 'Holdfast Backup');
       check('Manifest complete', r1.manifest.complete === true);
       check('PDF written', fs.readdirSync(root).some((f) => /^Emergency plan .*\.pdf$/.test(f) && fs.statSync(path.join(root, f)).size > 10000));
       check('Plan data encrypted', fs.existsSync(path.join(root, 'Data', 'plan.epsenc')) && !fs.readFileSync(path.join(root, 'Data', 'plan.epsenc'), 'utf8').includes('Sarah') && !fs.existsSync(path.join(root, 'Data', 'data')));

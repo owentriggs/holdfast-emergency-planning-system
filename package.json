@@ -1,8 +1,8 @@
 {
-  "name": "emergency-planning-system",
-  "productName": "Emergency Planning System",
-  "version": "0.1.0",
-  "description": "Offline-first household emergency planning utility (UK/Wales).",
+  "name": "holdfast-emergency-planning-system",
+  "productName": "Holdfast Emergency Planning System",
+  "version": "0.2.0",
+  "description": "Holdfast: offline-first household emergency planner for Windows (UK/Wales).",
   "main": "src/main/main.js",
   "private": true,
   "scripts": {
@@ -13,7 +13,7 @@
   },
   "build": {
     "appId": "uk.local.emergencyplanner",
-    "productName": "Emergency Planning System",
+    "productName": "Holdfast Emergency Planning System",
     "files": [
       "src/**/*",
       "node_modules/**/*",
@@ -31,7 +31,7 @@
       "allowToChangeInstallationDirectory": true,
       "installerIcon": "build/icon.ico",
       "uninstallerIcon": "build/icon.ico",
-      "shortcutName": "Emergency Planning System"
+      "shortcutName": "Holdfast Emergency Planning System"
     },
     "directories": {
       "buildResources": "build",

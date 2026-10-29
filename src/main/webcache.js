@@ -6,7 +6,7 @@ const path = require('path');
 const crypto = require('crypto');
 
 const KEY = 'webcache';
-const UA_SUFFIX = ' EmergencyPlanningSystem/0.1';
+const UA_SUFFIX = ' Holdfast/0.2';
 
 class WebCache {
   constructor(store, dir, emit) {
