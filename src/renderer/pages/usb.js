@@ -72,6 +72,7 @@ export async function render(root, params = {}) {
   // Compares the selected drive with this computer. Shows the review panel if the drive was changed elsewhere.
   async function loadReview(path, choices = {}) {
     try {
+      store.flush();
       const p = await window.api.usb.preview(path, choices);
       review = p.usbChanges || p.vault.state === 'locked' || p.vault.state === 'different' ? { target: path, p, choices } : null;
       since = p.manifest ? { list: p.since || [], created: p.manifest.created, hasBase: !!p.since } : null;
@@ -134,9 +135,10 @@ export async function render(root, params = {}) {
           if (!(await confirmBox(`Bring ${take} change(s) from the drive into this PC, keep the rest as they are here, then update the drive so both match?`, 'Apply'))) return;
           busy = true;
           try {
+            store.flush();
             const r = await window.api.usb.apply(review.target, choices);
             status(`Applied ${r.applied} change(s). This PC and the drive now match.`, 10000);
-            location.reload();
+            store.reloadFromDisk();
           } catch (e) { status('Could not apply: ' + errMsg(e), 10000); }
           busy = false;
         } }, icon('sync'), 'Apply and update drive'),
@@ -225,7 +227,7 @@ export async function render(root, params = {}) {
       runBtn.disabled = true;
       cancelBtn.disabled = false;
       const pdfHtml = opts.pdf ? buildDocument(SECTIONS.map((x) => x.id)) : null;
-      const go = (overwrite) => window.api.usb.run(target.path, { plan: opts.plan, password: opts.plan && opts.protect ? pw.value : null, vault: opts.vault, library: opts.library, tiles: opts.tiles, app: opts.app, pdfHtml, overwrite });
+      const go = (overwrite) => (store.flush(), window.api.usb.run(target.path, { plan: opts.plan, password: opts.plan && opts.protect ? pw.value : null, vault: opts.vault, library: opts.library, tiles: opts.tiles, app: opts.app, pdfHtml, overwrite }));
       try {
         let r;
         try { r = await go(false); } catch (e) {
@@ -308,7 +310,7 @@ export async function render(root, params = {}) {
           try {
             const r = await window.api.usb.restore(restoreFrom.path, { ...sel, password: pw.value || null });
             status('Restored: ' + r.restored.join(', '), 10000);
-            if (r.restored.includes('plan') || r.restored.includes('library')) return location.reload();
+            if (r.restored.includes('plan') || r.restored.includes('library')) return store.reloadFromDisk();
             est = await window.api.usb.estimate();
           } catch (e) { status('Restore failed: ' + errMsg(e), 10000); }
           busy = false;

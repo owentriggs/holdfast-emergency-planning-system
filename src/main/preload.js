@@ -3,7 +3,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 const inv = (ch) => (...a) => ipcRenderer.invoke(ch, ...a);
 
 contextBridge.exposeInMainWorld('api', {
-  store: { all: inv('store:all'), set: inv('store:set') },
+  store: { all: inv('store:all'), set: inv('store:set'), setSync: (key, value) => ipcRenderer.sendSync('store:setSync', key, value) },
   net: { get: inv('net:get') },
   webcache: {
     add: inv('webcache:add'),

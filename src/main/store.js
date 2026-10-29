@@ -40,8 +40,16 @@ class Store {
     fs.renameSync(tmp, file);
   }
 
-  replaceAll(obj) {
-    for (const [k, v] of Object.entries(obj)) this.set(k, v);
+  // Replaces every key with the ones in obj. Keys obj does not have are removed (a .bak copy is kept), so they go
+  // back to their defaults instead of mixing old data with the imported plan. Keys in keep are left alone.
+  replaceAll(obj, keep = []) {
+    for (const k of [...this.cache.keys()]) {
+      if (k in obj || keep.includes(k)) continue;
+      const file = this.file(k);
+      if (fs.existsSync(file)) fs.renameSync(file, file + '.bak');
+      this.cache.delete(k);
+    }
+    for (const [k, v] of Object.entries(obj)) if (!keep.includes(k)) this.set(k, v);
   }
 }
 

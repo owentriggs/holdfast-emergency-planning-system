@@ -88,9 +88,11 @@ function createWindow() {
     },
   });
   win.loadURL('app://ui/index.html');
-  win.on('close', () => {
-    const [w, h] = win.getSize();
-    store.set('settings', { ...settings(), winW: w, winH: h });
+  // Size is read on close but written once the page has gone, so it is not overwritten by the page's last save.
+  let size = null;
+  win.on('close', () => { size = win.getSize(); });
+  win.on('closed', () => {
+    if (size) store.set('settings', { ...settings(), winW: size[0], winH: size[1] });
   });
   // Links clicked in the app open in the system browser, never in the app window.
   win.webContents.setWindowOpenHandler(({ url }) => {
@@ -230,6 +232,15 @@ function registerIpc(dataRoot) {
     store.set(key, value);
     return true;
   });
+  // Used when the window is closing, so edits still waiting to be saved are written before it goes.
+  ipcMain.on('store:setSync', (e, key, value) => {
+    try {
+      if (key !== 'webcache') store.set(key, value);
+      e.returnValue = true;
+    } catch (err) {
+      e.returnValue = false;
+    }
+  });
 
   ipcMain.handle('net:get', async (_e, url, as = 'json') => {
     if (!/^https:\/\//.test(url)) throw new Error('Only https URLs are allowed');
@@ -361,7 +372,8 @@ function registerIpc(dataRoot) {
     if (r.canceled) return { ok: false };
     const obj = JSON.parse(fs.readFileSync(r.filePaths[0], 'utf8'));
     if (obj.format !== 'eps-backup' || !obj.data) throw new Error('Not a Holdfast backup file');
-    store.replaceAll(obj.data);
+    // The library index stays: it must match the cached files on this computer, which the backup does not hold.
+    store.replaceAll(obj.data, ['webcache']);
     return { ok: true };
   });
   ipcMain.handle('app:openDataFolder', () => shell.openPath(dataRoot));

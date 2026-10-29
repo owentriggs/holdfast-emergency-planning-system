@@ -37,7 +37,11 @@ function buildNav() {
   }));
 }
 
+// Each navigation gets a number; a page that finishes loading after a newer navigation started is thrown away.
+let navSeq = 0;
+
 export async function go(id, params) {
+  const seq = ++navSeq;
   const p = PAGES.find((x) => x.id === id) || PAGES[1];
   if (cleanup) {
     try { cleanup(); } catch (e) { console.error(e); }
@@ -51,12 +55,21 @@ export async function go(id, params) {
   page.className = p.fill ? 'fill' : '';
   page.replaceChildren();
   page.scrollTop = 0;
+  // Pages render into their own element, which only goes on screen if this is still the latest navigation.
+  const target = h('div', { style: 'display:contents' });
   try {
     const mod = await import(p.mod);
-    cleanup = (await mod.render(page, params || {})) || null;
+    if (seq !== navSeq) return;
+    page.replaceChildren(target);
+    const done = (await mod.render(target, params || {})) || null;
+    if (seq !== navSeq) {
+      if (done) try { done(); } catch (e) { console.error(e); }
+      return;
+    }
+    cleanup = done;
   } catch (e) {
     console.error(e);
-    page.replaceChildren(h('div', { class: 'note warn' }, 'Error loading page: ' + e.message));
+    if (seq === navSeq) page.replaceChildren(h('div', { class: 'note warn' }, 'Error loading page: ' + e.message));
   }
 }
 window.go = go;
@@ -164,6 +177,8 @@ async function boot() {
   const needsV2 = !('dataVersion' in s);
   for (const [k, v] of Object.entries(DEFAULTS.settings)) if (!(k in s)) s[k] = v;
   if (needsV2) removeUntouchedStarterRows(SUGGESTIONS);
+  // Earlier versions could save 0 here by clearing the box in Settings.
+  for (const k of ['targetDays', 'waterPerPersonDay', 'reviewIntervalMonths', 'keepVersions']) if (!(Number(s[k]) > 0)) s[k] = DEFAULTS.settings[k];
   store.save('settings');
 
   applyTheme();

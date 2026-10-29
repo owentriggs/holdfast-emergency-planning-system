@@ -36,6 +36,8 @@ function backupRoot(target) {
   return !fs.existsSync(now) && fs.existsSync(old) ? old : now;
 }
 const DRIVE_TYPES = { 2: 'Removable', 3: 'Local disk', 4: 'Network', 5: 'CD/DVD' };
+// Test scripts set this so a real backup drive that happens to be plugged in is never listed, compared or written to.
+const IGNORE_DRIVES = process.env.HOLDFAST_IGNORE_DRIVES === '1';
 
 function ps(command) {
   return new Promise((resolve, reject) => execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', command], { windowsHide: true, timeout: 20000 }, (err, out) => (err ? reject(err) : resolve(out))));
@@ -88,6 +90,7 @@ class UsbBackup {
   }
 
   async drives() {
+    if (IGNORE_DRIVES) return [];
     const out = await ps('Get-CimInstance Win32_LogicalDisk | Select-Object DeviceID,VolumeName,Size,FreeSpace,DriveType,FileSystem | ConvertTo-Json');
     const list = [].concat(JSON.parse(out || '[]'));
     const sys = (process.env.SystemDrive || 'C:').toUpperCase();
@@ -373,6 +376,7 @@ class UsbBackup {
   // Looks for backup drives with changes made elsewhere. Run on a timer; a drive is only re-compared when its files change.
   async scan() {
     const found = [];
+    if (IGNORE_DRIVES) return found;
     for (let c = 68; c <= 90; c++) {
       const drive = String.fromCharCode(c) + ':';
       if (this.dataRoot.toUpperCase().startsWith(drive)) continue;
@@ -426,7 +430,7 @@ class UsbBackup {
       // Keep this computer's record of when it was last backed up.
       const cur = this.store.get('settings', {});
       if (plan.settings) plan.settings = { ...plan.settings, lastUsbBackup: cur.lastUsbBackup, lastUsbTarget: cur.lastUsbTarget };
-      this.store.replaceAll(plan);
+      this.store.replaceAll(plan, ['webcache']); // the library index is restored with the library below
       done.push('plan');
     }
     if (opts.vault && fs.existsSync(path.join(root, 'Data', 'vault', 'vault.json'))) {
@@ -446,6 +450,7 @@ class UsbBackup {
   // Drives plugged in now that hold a Holdfast backup. Cheap enough to run every couple of seconds.
   present() {
     const out = [];
+    if (IGNORE_DRIVES) return out;
     for (let c = 68; c <= 90; c++) {
       const drive = String.fromCharCode(c) + ':';
       if (this.dataRoot.toUpperCase().startsWith(drive)) continue;

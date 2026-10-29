@@ -21,6 +21,7 @@ const legacy = path.join(drive, 'EPS Backup');
 fs.mkdirSync(path.join(legacy, 'Data', 'data'), { recursive: true });
 fs.writeFileSync(path.join(legacy, 'backup.json'), JSON.stringify({ format: 'eps-backup-folder', version: 1, created: '2026-01-01T00:00:00.000Z', complete: true, contents: {} }));
 fs.writeFileSync(path.join(legacy, 'Start Emergency Planning System.cmd'), '@echo old launcher\r\n');
+process.env.HOLDFAST_IGNORE_DRIVES = '1'; // never touch a real backup drive that is plugged in
 require('../src/main/main.js');
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));

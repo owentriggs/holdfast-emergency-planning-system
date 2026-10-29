@@ -8,6 +8,7 @@ const os = require('os');
 const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'eps-vault-'));
 const shots = process.env.EPS_SHOTS || dataDir;
 app.setPath('userData', dataDir);
+process.env.HOLDFAST_IGNORE_DRIVES = '1'; // never touch a real backup drive that is plugged in
 require('../src/main/main.js');
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));

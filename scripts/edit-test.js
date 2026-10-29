@@ -15,6 +15,7 @@ fs.writeFileSync(path.join(dataDir, 'data', 'locations.json'), JSON.stringify([
   { id: 'b', item: 'Electricity meter', location: 'Under the stairs', howTo: '', checked: '' },
   { id: 'c', item: 'Grab bag', location: '', howTo: '', checked: '' },
 ]));
+process.env.HOLDFAST_IGNORE_DRIVES = '1'; // never touch a real backup drive that is plugged in
 require('../src/main/main.js');
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));

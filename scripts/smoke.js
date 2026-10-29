@@ -8,6 +8,7 @@ const os = require('os');
 const out = path.resolve(process.argv[2] || path.join(os.tmpdir(), 'eps-smoke'));
 fs.mkdirSync(out, { recursive: true });
 app.setPath('userData', fs.mkdtempSync(path.join(os.tmpdir(), 'eps-data-')));
+process.env.HOLDFAST_IGNORE_DRIVES = '1'; // never touch a real backup drive that is plugged in
 require('../src/main/main.js');
 
 const PAGES = ['dashboard', 'planner', 'contacts', 'supplies', 'checklists', 'firstaid', 'library', 'radio', 'maps', 'weather', 'tools', 'print', 'settings'];

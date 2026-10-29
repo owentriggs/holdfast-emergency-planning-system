@@ -23,6 +23,17 @@ export function coverageByCategory() {
   return out;
 }
 
+// Litres of drinking water: every Water row except ones named as being for washing, cooking, cleaning or flushing.
+// Used by both this page and the dashboard so they always agree.
+export function drinkingWater() {
+  const st = store.settings();
+  const litres = store.get('supplies')
+    .filter((r) => r.category === 'Water' && !/wash|cook|clean|flush|toilet/i.test(r.item || ''))
+    .reduce((a, r) => a + (Number(r.qty) || 0), 0);
+  const need = store.householdSize() * st.waterPerPersonDay * st.targetDays;
+  return { litres, need, days: litres / (store.householdSize() * st.waterPerPersonDay) };
+}
+
 export function expiringItems(withinDays = 90) {
   const rows = [];
   for (const [key, src] of [['supplies', 'Supplies'], ['firstAidKit', 'First aid kit']])
@@ -45,8 +56,7 @@ export function render(root) {
   const refresh = () => {
     const people = store.householdSize();
     const cov = coverageByCategory();
-    const water = rows.filter((r) => r.category === 'Water' && /drink/i.test(r.item)).reduce((a, r) => a + (r.qty || 0), 0);
-    const waterNeed = people * st.waterPerPersonDay * st.targetDays;
+    const { litres: water, need: waterNeed } = drinkingWater();
     summary.replaceChildren(
       h('div', { class: 'stat' }, h('div', { class: 'v' }, people), h('div', { class: 'l' }, 'People in household')),
       h('div', { class: 'stat ' + (water >= waterNeed ? 'ok' : 'bad') }, h('div', { class: 'v' }, `${water} / ${waterNeed} L`), h('div', { class: 'l' }, `Drinking water for ${st.targetDays} days`)),

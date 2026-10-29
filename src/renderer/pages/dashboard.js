@@ -1,6 +1,6 @@
 import * as store from '../lib/store.js';
 import { h, panel, table, bar, chart, fmtDate, daysUntil, COLORS, icon } from '../lib/ui.js';
-import { coverageByCategory, expiringItems, targetLine } from './supplies.js';
+import { coverageByCategory, expiringItems, targetLine, drinkingWater } from './supplies.js';
 import { progress } from './checklists.js';
 import { WMO } from './weather.js';
 
@@ -8,6 +8,7 @@ function readiness(tilesCount) {
   const st = store.settings();
   const hh = store.get('household');
   const cov = coverageByCategory();
+  const water = drinkingWater();
   const capped = (v) => Math.max(0, Math.min(1, v || 0));
   const contacts = store.get('contacts');
   const kit = store.get('firstAidKit').filter((r) => r.target);
@@ -24,7 +25,7 @@ function readiness(tilesCount) {
     { name: 'Emergency contacts', page: 'contacts', score: capped(contacts.filter((c) => c.phone && (c.ice || c.category === 'Out-of-area contact')).length / 2), detail: `${contacts.filter((c) => c.phone).length} contacts with numbers, ${contacts.filter((c) => c.phone && (c.ice || c.category === 'Out-of-area contact')).length} ICE / out-of-area` },
     { name: 'Meeting points', page: 'planner', score: capped(store.get('meeting').filter((m) => m.name || m.address).length / 2), detail: `${store.get('meeting').filter((m) => m.name || m.address).length} set` },
     { name: 'Key locations recorded', page: 'planner', score: locs.length ? locs.filter((l) => l.location).length / locs.length : 0, detail: `${locs.filter((l) => l.location).length} of ${locs.length}` },
-    { name: 'Drinking water', page: 'supplies', score: capped((cov.Water || 0) / st.targetDays), detail: `${(cov.Water || 0).toFixed(1)} of ${st.targetDays} days` },
+    { name: 'Drinking water', page: 'supplies', score: capped(water.days / st.targetDays), detail: `${water.litres} of ${water.need} litres (${water.days.toFixed(1)} of ${st.targetDays} days)` },
     { name: 'Food', page: 'supplies', score: capped((cov.Food || 0) / st.targetDays), detail: `${(cov.Food || 0).toFixed(1)} of ${st.targetDays} days` },
     { name: 'First aid kit', page: 'firstaid', score: kit.length ? kit.filter((r) => (r.qty || 0) >= r.target).length / kit.length : 0, detail: `${kit.filter((r) => (r.qty || 0) >= r.target).length} of ${kit.length} items at target` },
     { name: 'Checklists', page: 'checklists', score: lists.length ? lists.reduce((a, l) => a + progress(l).frac, 0) / lists.length : 0, detail: `${lists.filter((l) => progress(l).frac === 1).length} of ${lists.length} complete` },
@@ -111,7 +112,7 @@ export async function render(root) {
       ], exp, { rowClass: (r) => (r.days < 0 ? 'bad' : 'warn'), emptyText: 'Nothing expiring soon', maxHeight: '220px' })),
       panel('Weather warnings', warnItems.length ? table([{ label: 'Warning', key: 'title' }, { label: 'Issued', get: (r) => fmtDate(r.date, true) }], warnItems) : h('div', { class: 'muted' }, warn ? 'None in force at last check (' + fmtDate(warn.at, true) + ')' : 'Not checked yet'))),
     h('div', { style: 'height:10px' }),
-    panel('Scenario plans', h('div', { class: 'row' }, store.get('scenarios').map((s) => h('button', { onclick: () => window.go('planner') }, s.name)))));
+    panel('Scenario plans', h('div', { class: 'row' }, store.get('scenarios').map((s) => h('button', { onclick: () => window.go('planner', { tab: 'scenarios', scenario: s.id }) }, s.name)))));
 
   const cov = coverageByCategory();
   const labels = Object.keys(cov);

@@ -124,6 +124,7 @@ export function promptForm(title, fields, okLabel = 'OK') {
           dlg.close();
           resolve(out);
         } }, okLabel)));
+    dlg.addEventListener('cancel', (e) => { e.preventDefault(); dlg.close(); resolve(null); });
     dlg.addEventListener('close', () => setTimeout(() => dlg.remove(), 0));
     dlg.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.tagName === 'INPUT') dlg.querySelector('button.primary').click(); });
     document.body.appendChild(dlg);

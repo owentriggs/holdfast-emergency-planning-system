@@ -14,6 +14,7 @@ w(path.join(dataDir, 'data'), 'settings', { dataVersion: 2 });
 w(path.join(dataDir, 'data'), 'household', { name: 'Jones household', postcode: 'CF10 1AA', people: [{ id: 'mum', name: 'Sarah Jones', mobile: '07700 900111' }], pets: [] });
 w(path.join(dataDir, 'data'), 'contacts', [{ id: 'gran', name: 'Mary Evans', phone: '07700 900222', email: '' }, { id: 'gp', name: 'GP surgery', phone: '029 2000 0000' }]);
 w(path.join(dataDir, 'data'), 'markers', [{ id: 'm1', name: 'Rest centre' }]);
+process.env.HOLDFAST_IGNORE_DRIVES = '1'; // never touch a real backup drive that is plugged in
 require('../src/main/main.js');
 const { Vault } = require('../src/main/vault.js');
 

@@ -29,7 +29,10 @@ const TABS = [
   { id: 'review', label: 'Review Log', key: 'reviewLog' },
 ];
 
-export function render(root) {
+export function render(root, params = {}) {
+  // Opened from elsewhere at a given tab or scenario, e.g. a scenario button on the dashboard.
+  if (params.tab && VIEWS[params.tab]) activeTab = params.tab;
+  if (params.scenario) activeScenario = params.scenario;
   const body = h('div');
   const draw = () => {
     const counts = {
@@ -87,12 +90,12 @@ const VIEWS = {
       ...store.get('contacts').filter((c) => c.name).map((c) => ({ value: 'c:' + c.id, label: c.name + (c.relation ? ` (${c.relation})` : ' (contact)') }))];
     const people = editTable([
       { key: 'name', label: 'Name', width: '140px' },
-      { key: 'role', label: 'Role', type: 'select', options: ROLES, width: '110px', title: 'Children and dependants get their parent or carer details on their emergency card' },
+      { key: 'role', label: 'Role', type: 'select', options: ROLES, width: '135px', title: 'Children and dependants get their parent or carer details on their emergency card' },
       { key: 'carer1', label: 'Parent / carer', type: 'select', options: carerOptions, width: '130px', title: 'Shown on their emergency card. Pick someone in the household or a contact.' },
       { key: 'carer2', label: 'Second carer', type: 'select', options: carerOptions, width: '130px' },
       { key: 'dob', label: 'Date of birth', type: 'date', width: '120px' },
       { key: 'age', label: 'Age', type: 'ro', num: true, compute: (r) => ageFrom(r.dob), width: '40px' },
-      { key: 'mobile', label: 'Mobile', width: '120px' },
+      { key: 'mobile', label: 'Mobile', width: '135px' },
       { key: 'conditions', label: 'Medical conditions', type: 'textarea' },
       { key: 'allergies', label: 'Allergies' },
       { key: 'blood', label: 'Blood', type: 'select', options: ['', 'O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'Unknown'], width: '70px' },
@@ -148,7 +151,7 @@ const VIEWS = {
       { key: 'service', label: 'Service', width: '200px' },
       { key: 'provider', label: 'Provider', width: '160px' },
       { key: 'account', label: 'Account / policy no.', width: '160px' },
-      { key: 'phone', label: 'Phone', width: '130px' },
+      { key: 'phone', label: 'Phone', width: '135px' },
       { key: 'emergency', label: 'Emergency line', width: '120px' },
       { key: 'notes', label: 'Notes', type: 'textarea' },
     ], store.get('utilities'), save('utilities'), { addLabel: 'Add service', suggestions: suggestionsFor('utilities'), emptyText: 'No services recorded yet.' }));
