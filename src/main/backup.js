@@ -6,7 +6,7 @@
 //   backup.json                      manifest, written last ("complete": true)
 //   Data/data/*.json                 plan data (or Data/plan.epsenc when protected with a password)
 //   Data/vault, Data/webcache, Data/tiles
-//   Start Holdfast                   optional copy of the program: the portable .exe itself, or a .cmd launcher for App/
+//   Start Holdfast                   optional copy of the program: the portable .exe itself, or a launcher .exe for App/
 //   App/                             the installed program's files, when copied from an installed app
 //   .holdfast-index.json             size, time and sha256 of each file written, so unchanged files are not copied again
 //
@@ -241,7 +241,16 @@ class UsbBackup {
           await this.sync(src.path, dest, 'Program', /^Uninstall .*\.exe$/i, (index.App = index.App || {}));
           fs.writeFileSync(path.join(dest, PORTABLE), JSON.stringify({ dataDir: '../Data' }, null, 1));
           fs.rmSync(path.join(dest, LEGACY.portable), { force: true });
-          fs.writeFileSync(path.join(root, LAUNCHER + '.cmd'), `@start "" "%~dp0App\\${path.basename(process.execPath)}"\r\n`);
+          // A small exe with the Holdfast icon (build/launcher.cs); the .cmd is only for builds without it.
+          const exe = path.join(process.resourcesPath || '', 'launcher.exe');
+          if (process.resourcesPath && fs.existsSync(exe)) {
+            index.exe = (await this.copyIfChanged(exe, path.join(root, LAUNCHER + '.exe'), index.exe, true)).entry;
+            fs.rmSync(path.join(root, LAUNCHER + '.cmd'), { force: true });
+          } else {
+            fs.writeFileSync(path.join(root, LAUNCHER + '.cmd'), `@start "" "%~dp0App\\${path.basename(process.execPath)}"\r\n`);
+            fs.rmSync(path.join(root, LAUNCHER + '.exe'), { force: true });
+            delete index.exe;
+          }
         }
         for (const f of [LEGACY.launcher + '.exe', LEGACY.launcher + '.cmd', LEGACY.portable]) fs.rmSync(path.join(root, f), { force: true });
         contents.app = { version: this.app.getVersion(), kind: src.kind };
