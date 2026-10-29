@@ -1,4 +1,8 @@
-# Emergency Planning System
+<p align="center">
+  <img src="src/assets/logo.svg" alt="Emergency Planning System logo" width="120">
+</p>
+
+<h1 align="center">Emergency Planning System</h1>
 
 A Windows desktop app for planning how your household copes with an emergency: power cuts, floods, storms, fire, evacuation, or being cut off for a few days. It follows UK Government (GOV.UK "Be Ready") and Welsh Government guidance and is built to keep working when the internet does not.
 
