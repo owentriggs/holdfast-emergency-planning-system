@@ -91,7 +91,7 @@ p { margin: 4px 0; }
 #statusmsg { color: var(--muted); font-size: 11px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .pill { display: inline-block; padding: 1px 7px; border-radius: 9px; font-size: 11px; border: 1px solid var(--line); white-space: nowrap; }
-.pill.ok { color: var(--green); background: var(--green-bg); border-color: transparent; }
+.pill.ok { color: var(--muted); }
 .pill.bad { color: var(--red); background: var(--red-bg); border-color: transparent; }
 .pill.warn { color: var(--amber); background: var(--amber-bg); border-color: transparent; }
 .pill.info { color: var(--accent); background: var(--accent-bg); border-color: transparent; }
@@ -221,8 +221,9 @@ webview { flex: 1; border: 1px solid var(--line); background: #fff; }
 .maplegend { font-size: 11px; }
 
 /* Misc */
-.note { padding: 6px 8px; border: 1px solid var(--line); background: var(--panel2); font-size: 11px; color: var(--muted); }
-.note.warn { background: var(--amber-bg); color: var(--amber); border-color: transparent; }
+/* Plain hint line; .warn makes it an amber box for things the user must act on. */
+.note { font-size: 11px; color: var(--muted); }
+.note.warn { padding: 6px 8px; background: var(--amber-bg); color: var(--amber); }
 .kv { display: grid; grid-template-columns: max-content 1fr; gap: 2px 10px; }
 .kv > :nth-child(odd) { color: var(--muted); }
 .big999 { font-size: 22px; font-weight: 700; color: var(--red); }

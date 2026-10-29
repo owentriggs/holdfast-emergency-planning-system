@@ -124,7 +124,7 @@ export async function render(root, params = {}) {
         p.pcChanges ? `${p.pcChanges} change(s) made on this PC since the last backup will be copied to the drive. ` : '',
         'Changes from the drive are selected by default. Check the list, then apply.'),
       p.hasBase ? null : h('div', { class: 'note warn' }, 'This backup was made by an older version, so the app cannot tell which side made each change. Everything that differs is listed; choose what to keep.'),
-      p.vault.state === 'locked' ? h('div', { class: 'note warn row' }, 'The document vault on the drive has changed. Unlock the vault to compare documents.', h('button', { onclick: () => window.go('vault') }, icon('lock-open-variant-outline'), 'Unlock vault')) : null,
+      p.vault.state === 'locked' ? h('div', { class: 'note warn row' }, 'The document vault on the drive has changed. Unlock the vault to compare documents.', h('button', { onclick: () => window.go('vault') }, 'Unlock vault')) : null,
       p.vault.state === 'different' ? h('div', { class: 'note warn' }, 'The document vault on the drive is a different vault (created separately), so it is not compared or changed.') : null,
       listed.length ? h('div', { class: 'tblwrap', style: 'max-height:360px' }, h('table', { class: 'tbl' },
         h('thead', null, h('tr', null, ['Section', 'Item', 'What happened', 'This PC', 'Drive', 'Use'].map((l) => h('th', null, l)))),
@@ -157,11 +157,7 @@ export async function render(root, params = {}) {
       review ? reviewPanel() : null,
       h('div', { class: 'grid g21' },
         h('div', { class: 'stack' }, drivePanel(), since && !review ? sincePanel() : null, includePanel()),
-        h('div', { class: 'stack' }, restorePanel(), panel('Good practice', h('ul', { class: 'small', style: 'margin:0;padding-left:18px;line-height:1.6' },
-          h('li', null, 'Back up after you change the plan, and at least monthly. The page warns after 30 days.'),
-          h('li', null, 'Keep one drive in your grab bag and, if you can, one with a trusted person away from home.'),
-          h('li', null, 'Turn on "Protect plan data with a password" if the drive could be lost. The printable PDF is never protected, so leave it out in that case.'),
-          h('li', null, 'Use "Eject" before unplugging so nothing is lost.'))))));
+        h('div', { class: 'stack' }, restorePanel(), h('div', { class: 'note' }, 'Back up after changing the plan and at least monthly. Keep one drive in your grab bag and, if you can, one with someone away from home.'))));
   }
 
   function drivePanel() {
@@ -185,11 +181,11 @@ export async function render(root, params = {}) {
     const custom = target && !target.drive;
     return panel('1. Drive', h('div', null,
       h('div', { class: 'tbltools' },
-        h('button', { onclick: async () => { await loadDrives(); draw(); } }, icon('refresh'), 'Refresh'),
+        h('button', { onclick: async () => { await loadDrives(); draw(); } }, 'Refresh'),
         h('button', { onclick: async () => {
           const r = await window.api.usb.chooseFolder('Choose a folder to back up into');
           if (r) { target = { path: r.path, label: r.path, manifest: r.manifest }; if (r.manifest) await loadReview(r.path); else review = since = null; draw(); }
-        } }, icon('folder-outline'), 'Choose a folder instead...'),
+        } }, 'Choose a folder instead...'),
         custom ? h('span', { class: 'pill info' }, 'Folder: ' + target.path) : null,
         h('span', { class: 'spacer' }),
         h('span', { class: 'muted small' }, 'Updates when a drive is plugged in')),
@@ -248,7 +244,7 @@ export async function render(root, params = {}) {
       draw();
     };
     const runBtn = h('button', { class: 'primary', disabled: !target || tooBig, onclick: run, style: 'font-size:14px;padding:6px 16px' }, icon('usb-flash-drive-outline'), 'Back up now');
-    const cancelBtn = h('button', { disabled: true, onclick: () => window.api.usb.cancel() }, icon('stop'), 'Cancel');
+    const cancelBtn = h('button', { disabled: true, onclick: () => window.api.usb.cancel() }, 'Cancel');
 
     return panel('2. What to include', h('div', { class: 'stack' },
       h('div', { class: 'tblwrap' }, h('table', { class: 'tbl' }, h('tbody', null,
@@ -265,7 +261,7 @@ export async function render(root, params = {}) {
         runBtn, cancelBtn,
         h('span', { class: tooBig ? '' : 'muted' , style: tooBig ? 'color:var(--red)' : '' }, `About ${fmtBytes(total)}`, free != null ? ` to copy, ${fmtBytes(free)} free` : '', tooBig ? '. Not enough space.' : ''),
         h('span', { class: 'spacer' }),
-        target ? h('button', { onclick: () => window.api.usb.openFolder(target.path) }, icon('folder-open-outline'), 'Open') : null),
+        target ? h('button', { onclick: () => window.api.usb.openFolder(target.path) }, 'Open') : null),
       progBar, progText,
       h('div', { class: 'note' }, target ? `Saves into "${target.path.replace(/\\$/, '')}\\Holdfast Backup". An earlier backup there is updated.` : 'Choose a drive above.')));
   }
@@ -286,8 +282,8 @@ export async function render(root, params = {}) {
     const fromDrive = drives.filter((d) => d.manifest && d.manifest.complete);
     return panel('Restore from a backup', h('div', { class: 'stack' },
       h('div', { class: 'row' },
-        fromDrive.map((d) => h('button', { onclick: () => { restoreFrom = { path: d.root, manifest: d.manifest }; draw(); } }, icon('usb-flash-drive-outline'), `${d.id} ${d.label}`)),
-        h('button', { onclick: pick }, icon('folder-outline'), 'Choose folder...')),
+        fromDrive.map((d) => h('button', { onclick: () => { restoreFrom = { path: d.root, manifest: d.manifest }; draw(); } }, `${d.id} ${d.label}`)),
+        h('button', { onclick: pick }, 'Choose folder...')),
       m ? h('div', { class: 'stack' },
         h('div', { class: 'kv small' },
           h('span', null, 'Location'), h('span', { class: 'mono' }, restoreFrom.path),

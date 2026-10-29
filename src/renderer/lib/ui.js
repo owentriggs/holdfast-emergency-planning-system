@@ -300,7 +300,7 @@ export function editTable(columns, rows, onChange, opts = {}) {
     onChange(rows);
     draw();
   }
-  const sugBtn = opts.suggestions ? h('button', { title: opts.suggestions.label || 'Add common items you can then fill in or delete', onclick: addSuggestions }, icon('playlist-plus'), 'Add suggestions') : null;
+  const sugBtn = opts.suggestions ? h('button', { title: opts.suggestions.label || 'Add common items you can then fill in or delete', onclick: addSuggestions }, 'Add suggestions') : null;
 
   function move(i, d) {
     const j = i + d;
@@ -321,7 +321,7 @@ export function editTable(columns, rows, onChange, opts = {}) {
       draw();
       const last = tbody.lastElementChild && tbody.lastElementChild.querySelector('input,select,textarea');
       if (last) last.focus();
-    } }, icon('plus'), opts.addLabel || 'Add row'),
+    } }, opts.addLabel || 'Add row'),
     sugBtn,
     opts.toolbar || null,
     h('span', { class: 'spacer' }),
@@ -367,6 +367,11 @@ export function chart(canvasParent, config) {
   return new Chart(canvas, config);
 }
 
-export const COLORS = {
-  blue: '#2f6fbf', red: '#c0392b', amber: '#c98a00', green: '#2e8540', grey: '#8a8f96', teal: '#2a8c8c', purple: '#7a4fb0',
-};
+// Chart colours from the theme, read when a chart is drawn so they follow light and dark.
+// Red is for expired or dangerous values only; series is for charts that need several neutral colours.
+export function chartColors() {
+  const cs = getComputedStyle(document.documentElement);
+  const v = (name) => cs.getPropertyValue(name).trim();
+  return { accent: v('--accent'), amber: v('--amber'), red: v('--red'), green: v('--green'), muted: v('--muted'),
+    series: [v('--accent'), v('--green'), v('--amber'), v('--muted')] };
+}

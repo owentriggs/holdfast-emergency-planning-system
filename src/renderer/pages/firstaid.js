@@ -42,7 +42,7 @@ function guides() {
     const sev = SEVERITY[g.sev];
     detail.replaceChildren(...[
       h('div', { class: 'row' }, h('h2', null, g.title), h('span', { class: 'pill ' + sev.cls }, sev.label), h('span', { class: 'spacer' }),
-        h('button', { onclick: () => window.go('print', { guides: [g.id] }) }, icon('printer'), 'Print this guide')),
+        h('button', { onclick: () => window.go('print', { guides: [g.id] }) }, 'Print this guide')),
       h('div', { class: 'muted', style: 'font-size:13px;margin:4px 0 8px' }, g.summary),
       g.sev === 'call999' ? h('div', { class: 'callout' }, h('b', null, 'Life-threatening: call 999 (or 112). '), 'Put the phone on speaker so you can keep helping. The call handler will guide you.') : null,
       h('h3', null, 'What to do'),
@@ -67,9 +67,9 @@ function guides() {
           h('option', { value: '' }, 'All'), Object.entries(SEVERITY).map(([k, v]) => h('option', { value: k, selected: sevFilter === k }, v.label)))),
       listEl,
       h('div', { class: 'row', style: 'margin-top:6px' },
-        h('button', { title: 'Tick guides in the list to print them as a set', onclick: () => selected.size && window.go('print', { guides: [...selected] }) }, icon('printer'), 'Print selected (', selCount, ')'),
-        h('button', { onclick: () => window.go('print', { guides: GUIDES.map((g) => g.id) }) }, icon('printer-outline'), 'Print all'),
-        h('button', { class: 'small', onclick: () => { selected.clear(); drawList(); selCount.textContent = 0; } }, icon('close'), 'Clear'))),
+        h('button', { title: 'Tick guides in the list to print them as a set', onclick: () => selected.size && window.go('print', { guides: [...selected] }) }, 'Print selected (', selCount, ')'),
+        h('button', { onclick: () => window.go('print', { guides: GUIDES.map((g) => g.id) }) }, 'Print all'),
+        h('button', { class: 'small', onclick: () => { selected.clear(); drawList(); selCount.textContent = 0; } }, 'Clear'))),
     h('div', { class: 'body' },
       h('div', { class: 'row', style: 'margin-bottom:6px' },
         h('span', { class: 'big999' }, '999 / 112'), h('span', { class: 'muted' }, 'life-threatening'),
@@ -108,6 +108,6 @@ function kit() {
       suggestions: suggestionsFor('firstAidKit'),
       emptyText: 'Kit is empty. The suggestions are based on the NHS recommended home first aid kit. Check medicines suit each person.',
       rowClass: (r) => { const d = daysUntil(r.expiry); return d != null && d < 0 ? 'bad' : (d != null && d <= 60) || (r.target && (r.qty || 0) < r.target) ? 'warn' : ''; },
-      toolbar: h('button', { onclick: () => window.go('print', { sections: ['kit'] }) }, icon('printer'), 'Print inventory'),
+      toolbar: h('button', { onclick: () => window.go('print', { sections: ['kit'] }) }, 'Print inventory'),
     })));
 }

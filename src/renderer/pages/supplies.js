@@ -1,5 +1,5 @@
 import * as store from '../lib/store.js';
-import { h, panel, editTable, chart, daysUntil, table, fmtDate, COLORS } from '../lib/ui.js';
+import { h, panel, editTable, chart, daysUntil, table, fmtDate, chartColors } from '../lib/ui.js';
 import { suggestionsFor } from '../data/defaults.js';
 
 export const CATEGORIES = ['Water', 'Food', 'Medical', 'Hygiene', 'Light and power', 'Communication', 'Warmth', 'Money and documents', 'Baby', 'Pets', 'Tools', 'Other'];
@@ -74,9 +74,10 @@ export function render(root) {
       if (idx >= 0 && idx < 12) counts[idx]++;
     }
     if (expChart) expChart.destroy();
+    const c = chartColors();
     expChart = chart(expEl, {
       type: 'bar',
-      data: { labels: ['Expired', ...months.map((m) => m.toLocaleDateString('en-GB', { month: 'short', year: '2-digit' }))], datasets: [{ label: 'Items expiring', data: [expired, ...counts], backgroundColor: [COLORS.red, ...counts.map((_, i) => (i < 1 ? COLORS.amber : COLORS.blue))] }] },
+      data: { labels: ['Expired', ...months.map((m) => m.toLocaleDateString('en-GB', { month: 'short', year: '2-digit' }))], datasets: [{ label: 'Items expiring', data: [expired, ...counts], backgroundColor: [c.red, ...counts.map((_, i) => (i < 1 ? c.amber : c.accent))] }] },
       options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } },
     });
 

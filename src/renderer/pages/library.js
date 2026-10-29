@@ -113,7 +113,7 @@ export function render(root) {
         h('div', { class: 'tbltools' },
           h('button', { class: 'primary', title: 'Update the ticked pages. With none ticked, updates pages that are missing, failed or older than 30 days.', onclick: () => capture(selected.size ? [...selected] : stalePages()) }, icon('cloud-download-outline'), 'Update'),
           h('button', { onclick: () => capture(items.map((i) => i.id)) }, 'Update all'),
-          h('button', { onclick: () => window.api.webcache.cancel() }, icon('stop'), 'Stop'),
+          h('button', { onclick: () => window.api.webcache.cancel() }, 'Stop'),
           h('label', { class: 'chk', title: 'Also save pages linked from each page (same website only)' },
             h('input', { type: 'checkbox', checked: linked.on, onchange: (e) => (linked.on = e.target.checked) }), 'Include linked pages, max',
             h('input', { type: 'number', value: linked.max, min: 1, max: 50, style: 'width:50px', oninput: (e) => (linked.max = Number(e.target.value) || 10) })),
@@ -129,7 +129,7 @@ export function render(root) {
             const added = await window.api.webcache.add([{ url: v.url, title: v.title, group: v.group || 'General' }]);
             if (!added.length) return status('Already in the library, or not a valid URL');
             if (v.now === 'yes') capture(added.map((a) => a.id));
-          } }, icon('plus'), 'Add page'),
+          } }, 'Add page'),
           h('button', { onclick: async () => {
             const existing = new Set(store.get('webcache').map((i) => norm(i.url)));
             const missing = WEB_PRESETS.filter((p) => !existing.has(norm(p.url)));
@@ -137,7 +137,7 @@ export function render(root) {
             if (!(await confirmBox(`Add ${missing.length} preset pages (GOV.UK Be Ready, Welsh Government, NHS, St John Ambulance, British Red Cross, Met Office, flood services)?`, 'Add'))) return;
             const added = await window.api.webcache.add(missing);
             if (navigator.onLine && (await confirmBox(`Added ${added.length}. Capture them now?`, 'Capture now'))) capture(added.map((a) => a.id));
-          } }, icon('playlist-plus'), 'Add presets'),),
+          } }, 'Add presets'),),
         h('div', { class: 'tbltools' },
           h('input', { type: 'search', placeholder: 'Filter...', value: query, oninput: (e) => { query = e.target.value; clearTimeout(list.t); list.t = setTimeout(draw, 250); } }),
           h('select', { onchange: (e) => { groupFilter = e.target.value; draw(); } }, h('option', { value: '' }, 'All groups'), groups.map((g) => h('option', { selected: g === groupFilter }, g))),
@@ -150,14 +150,14 @@ export function render(root) {
               { key: 'url', label: 'URL', value: it.url }, { key: 'notes', label: 'Notes', type: 'textarea', value: it.notes },
             ], 'Save');
             if (v) await window.api.webcache.update(it.id, v);
-          } }, icon('pencil-outline'), 'Edit'),
+          } }, 'Edit'),
           h('button', { class: 'danger', onclick: async () => {
             if (!selected.size) return;
             if (!(await confirmBox(`Remove ${selected.size} page(s) and their saved copies?`, 'Remove', true))) return;
             await window.api.webcache.remove([...selected]);
             selected.clear();
-          } }, icon('delete-outline'), 'Remove'),
-          h('button', { onclick: () => window.api.webcache.openFolder() }, icon('folder-open-outline'), 'Open folder')),
+          } }, 'Remove'),
+          h('button', { onclick: () => window.api.webcache.openFolder() }, 'Open folder')),
         progressEl,
         h('div', { class: 'tblwrap' }, h('table', { class: 'tbl' },
           h('thead', null, h('tr', null, h('th', { style: 'width:24px' }, allBox), h('th', null, 'Title'), h('th', null, 'Group'), h('th', null, 'URL'), h('th', null, 'Type'), h('th', null, 'Status'), h('th', null, 'Captured'), h('th', { class: 'num' }, 'Age'), h('th', { class: 'num' }, 'Size'), h('th', { class: 'num' }, 'Versions'))),
@@ -196,10 +196,10 @@ export function render(root) {
         addr,
         h('select', { title: 'Saved versions', onchange: (e) => { openVersion = e.target.value; live = false; draw(); } },
           (it.versions || []).map((v, i) => h('option', { value: v.file, selected: ver && v.file === ver.file }, (i === 0 ? 'Latest: ' : '') + fmtDate(v.at, true) + ' (' + fmtBytes(v.size) + ')'))),
-        h('button', { onclick: () => { if (live) loadCached(); else { live = true; modePill.className = 'pill info'; modePill.textContent = 'LIVE'; wv.src = it.url; } } }, icon(live ? 'archive-outline' : 'web'), live ? 'Show cached' : 'View live'),
-        h('button', { onclick: async () => { await capture([it.id]); openVersion = null; draw(); } }, icon('cloud-download-outline'), 'Update now'),
-        h('button', { onclick: () => wv.print() }, icon('printer'), 'Print'),
-        h('button', { onclick: () => window.api.app.openExternal(it.url) }, icon('open-in-new'), 'Open in browser')),
+        h('button', { onclick: () => { if (live) loadCached(); else { live = true; modePill.className = 'pill info'; modePill.textContent = 'LIVE'; wv.src = it.url; } } }, live ? 'Show cached' : 'View live'),
+        h('button', { onclick: async () => { await capture([it.id]); openVersion = null; draw(); } }, 'Update now'),
+        h('button', { onclick: () => wv.print() }, 'Print'),
+        h('button', { onclick: () => window.api.app.openExternal(it.url) }, 'Open in browser')),
       wv);
   }
 

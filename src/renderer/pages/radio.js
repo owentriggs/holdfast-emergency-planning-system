@@ -30,7 +30,7 @@ export function render(root) {
           store.save('radio');
           drawMine();
           status(`Added ${n} frequencies`);
-        } }, icon('playlist-plus'), 'Add all shown to my list'),
+        } }, 'Add all shown to my list'),
         h('span', { class: 'spacer' }), h('span', { class: 'muted small' }, rows.length + ' presets')),
       h('div', { class: 'tblwrap', style: 'max-height:calc(100vh - 260px)' }, h('table', { class: 'tbl' },
         h('thead', null, h('tr', null, ['', 'Service', 'Band', 'Frequency', 'Mode', 'Licence', 'Notes'].map((t) => h('th', null, t)))),

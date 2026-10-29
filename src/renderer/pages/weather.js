@@ -1,5 +1,5 @@
 import * as store from '../lib/store.js';
-import { h, panel, status, fmtDate, chart, table, COLORS, icon } from '../lib/ui.js';
+import { h, panel, status, fmtDate, chart, table, chartColors, icon } from '../lib/ui.js';
 
 // WMO weather interpretation codes used by Open-Meteo.
 export const WMO = {
@@ -92,22 +92,23 @@ export function render(root) {
 
       const tempEl = h('div', { class: 'chartbox', style: 'height:220px' });
       const windEl = h('div', { class: 'chartbox', style: 'height:220px' });
-      body.append(h('div', { class: 'grid g2' }, panel('Temperature and rain (7 days, hourly)', tempEl), panel('Wind speed and gusts (mph)', windEl)));
+      body.append(h('div', { class: 'grid g2' }, panel('Temperature and rain, 7 days', tempEl), panel('Wind and gusts, mph', windEl)));
       const hr = d.hourly;
+      const col = chartColors();
       const labels = hr.time.map((t) => { const x = new Date(t); return x.getHours() === 0 ? x.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' }) : x.getHours() + ':00'; });
       charts.push(chart(tempEl, {
         data: { labels, datasets: [
-          { type: 'line', label: 'Temp °C', data: hr.temperature_2m, borderColor: COLORS.red, pointRadius: 0, borderWidth: 1.5, yAxisID: 'y' },
-          { type: 'line', label: 'Feels like °C', data: hr.apparent_temperature, borderColor: COLORS.amber, pointRadius: 0, borderWidth: 1, borderDash: [3, 3], yAxisID: 'y' },
-          { type: 'bar', label: 'Rain mm', data: hr.precipitation, backgroundColor: COLORS.blue, yAxisID: 'y2' },
+          { type: 'line', label: 'Temp °C', data: hr.temperature_2m, borderColor: col.amber, pointRadius: 0, borderWidth: 1.5, yAxisID: 'y' },
+          { type: 'line', label: 'Feels like °C', data: hr.apparent_temperature, borderColor: col.muted, borderDash: [4, 3], pointRadius: 0, borderWidth: 1, borderDash: [3, 3], yAxisID: 'y' },
+          { type: 'bar', label: 'Rain mm', data: hr.precipitation, backgroundColor: col.accent, yAxisID: 'y2' },
         ] },
         options: { interaction: { mode: 'index', intersect: false }, scales: { x: { ticks: { autoSkip: true, maxTicksLimit: 14, maxRotation: 0 } }, y: { title: { display: true, text: '°C' } }, y2: { position: 'right', beginAtZero: true, grid: { display: false }, title: { display: true, text: 'mm' } } } },
       }));
       charts.push(chart(windEl, {
         type: 'line',
         data: { labels, datasets: [
-          { label: 'Wind', data: hr.wind_speed_10m, borderColor: COLORS.teal, pointRadius: 0, borderWidth: 1.5 },
-          { label: 'Gusts', data: hr.wind_gusts_10m, borderColor: COLORS.purple, pointRadius: 0, borderWidth: 1, fill: false },
+          { label: 'Wind', data: hr.wind_speed_10m, borderColor: col.accent, pointRadius: 0, borderWidth: 1.5 },
+          { label: 'Gusts', data: hr.wind_gusts_10m, borderColor: col.amber, pointRadius: 0, borderWidth: 1, fill: false },
         ] },
         options: { interaction: { mode: 'index', intersect: false }, scales: { x: { ticks: { autoSkip: true, maxTicksLimit: 14, maxRotation: 0 } }, y: { beginAtZero: true } } },
       }));
@@ -134,7 +135,7 @@ export function render(root) {
           { label: 'Severity', get: (r) => h('b', { style: r.level <= 2 ? 'color:var(--red)' : 'color:var(--amber)' }, r.severity) },
           { label: 'Area', key: 'area' }, { label: 'Description', key: 'desc' }, { label: 'Updated', get: (r) => fmtDate(r.changed, true) },
         ], flood.items, { emptyText: 'No flood alerts or warnings in force nearby' })));
-    body.append(h('div', { class: 'note' }, 'Forecast: Open-Meteo (free, non-commercial). Warnings: Met Office RSS. Flood: Environment Agency real-time API. The last fetched data stays available offline.'));
+    body.append(h('div', { class: 'note' }, 'Sources: Open-Meteo, Met Office, Environment Agency. The last fetch stays available offline.'));
   };
 
   const refresh = async (what = ['wx', 'warn', 'flood']) => {
@@ -152,7 +153,7 @@ export function render(root) {
     h('button', { class: 'primary', onclick: () => refresh() }, icon('refresh'), 'Refresh all'),
     h('span', { class: 'muted' }, hh.lat ? `Location: ${hh.postcode || ''} (${hh.lat.toFixed(3)}, ${hh.lon.toFixed(3)})` : 'No location set'),
     h('span', { class: 'spacer' }),
-    h('button', { onclick: () => window.api.app.openExternal('https://www.metoffice.gov.uk/weather/warnings-and-advice/uk-warnings') }, icon('open-in-new'), 'Met Office website')), body);
+    h('button', { onclick: () => window.api.app.openExternal('https://www.metoffice.gov.uk/weather/warnings-and-advice/uk-warnings') }, 'Met Office website')), body);
   draw();
   const wc = store.get('weatherCache');
   if (st.autoCheckWeather && navigator.onLine && !st.offlineMode && (!wc || Date.now() - new Date(wc.at) > 3 * 3600000)) refresh();

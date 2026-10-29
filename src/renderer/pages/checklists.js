@@ -31,7 +31,7 @@ export function render(root) {
           active = l.id;
           store.save('checklists');
           draw();
-        } }, icon('plus'), 'New checklist')));
+        } }, 'New checklist')));
 
     const body = h('div', { class: 'body' });
     if (cl) {
@@ -52,10 +52,10 @@ export function render(root) {
       const name = h('input', { value: cl.name, class: 'title', 'aria-label': 'Checklist name', oninput: (e) => { cl.name = e.target.value; store.save('checklists'); side.querySelector('.li.active .row span').textContent = cl.name; } });
       body.append(
         panel(name, tbl, [ptext,
-          h('button', { onclick: () => { cl.items.forEach((i) => (i.done = true)); store.save('checklists'); draw(); } }, icon('check-all'), 'Tick all'),
-          h('button', { onclick: async () => { if (await confirmBox('Untick every item in this checklist?', 'Reset')) { cl.items.forEach((i) => (i.done = false)); store.save('checklists'); draw(); } } }, icon('restore'), 'Reset'),
-          h('button', { onclick: () => window.go('print', { checklist: cl.id }) }, icon('printer'), 'Print'),
-          h('button', { class: 'danger', onclick: async () => { if (await confirmBox(`Delete checklist "${cl.name}"?`, 'Delete', true)) { lists.splice(lists.indexOf(cl), 1); store.save('checklists'); active = null; draw(); } } }, icon('delete-outline'), 'Delete')]));
+          h('button', { onclick: () => { cl.items.forEach((i) => (i.done = true)); store.save('checklists'); draw(); } }, 'Tick all'),
+          h('button', { onclick: async () => { if (await confirmBox('Untick every item in this checklist?', 'Reset')) { cl.items.forEach((i) => (i.done = false)); store.save('checklists'); draw(); } } }, 'Reset'),
+          h('button', { onclick: () => window.go('print', { checklist: cl.id }) }, 'Print'),
+          h('button', { class: 'danger', onclick: async () => { if (await confirmBox(`Delete checklist "${cl.name}"?`, 'Delete', true)) { lists.splice(lists.indexOf(cl), 1); store.save('checklists'); active = null; draw(); } } }, 'Delete')]));
     }
     root.replaceChildren(h('div', { class: 'split', style: 'min-height:560px' }, side, body));
   };

@@ -78,7 +78,7 @@ const VIEWS = {
       } catch (e) {
         status('Postcode lookup failed: ' + e.message, 8000);
       }
-    } }, icon('map-search-outline'), 'Look up');
+    } }, 'Look up');
 
     // Parent / carer links point at another person in the household (p:<id>) or a contact (c:<id>).
     if (hh.people.some((p) => !p.id)) { hh.people.forEach((p) => (p.id = p.id || uid())); store.save('household'); }
@@ -118,7 +118,7 @@ const VIEWS = {
           h('label', null, 'Household name'), text('name', 'e.g. The Smith family'),
           h('label', null, 'Address'), area('address'),
           h('label', null, 'Postcode'), h('div', { class: 'row', style: 'flex-wrap:nowrap' }, h('div', { style: 'flex:1' }, text('postcode')), lookup),
-          h('label', null, 'Coordinates'), h('div', { class: 'row' }, latLon, h('span', { class: 'spacer' }), h('button', { class: 'small', onclick: () => window.go('maps') }, icon('map-outline'), 'Map')),
+          h('label', null, 'Coordinates'), h('div', { class: 'row' }, latLon, h('span', { class: 'spacer' }), h('button', { class: 'small', onclick: () => window.go('maps') }, 'Map')),
           h('label', null, 'what3words'), text('what3words', 'e.g. filled.count.soap'),
           h('label', null, 'OS grid ref'), text('gridRef'),
           h('label', null, 'Access notes'), area('accessNotes', 'Key safe, gate codes, parking, how to find the house'))),
@@ -227,14 +227,14 @@ const VIEWS = {
             activeScenario = s.id;
             store.save('scenarios');
             draw();
-          } }, icon('plus'), 'Add scenario'),
+          } }, 'Add scenario'),
           sc ? h('button', { class: 'danger', onclick: async () => {
             if (!(await confirmBox(`Delete scenario "${sc.name}"?`, 'Delete', true))) return;
             list.splice(list.indexOf(sc), 1);
             store.save('scenarios');
             activeScenario = null;
             draw();
-          } }, icon('delete-outline'), 'Delete') : null));
+          } }, 'Delete') : null));
       const bodyEl = h('div', { class: 'body' }, sc ? h('div', { class: 'stack' },
         panel('Scenario', h('div', { class: 'form' },
           h('label', null, 'Name'), h('input', { value: sc.name, oninput: (e) => { sc.name = e.target.value; store.save('scenarios'); side.querySelector('.li.active span').textContent = sc.name; } }),

@@ -100,7 +100,7 @@ export async function render(root) {
     h('div', { class: 'row', style: 'margin-bottom:6px' },
       h('select', { onchange: (e) => { st.mapSource = e.target.value; store.save('settings'); setSource(e.target.value); } },
         Object.entries(sources).map(([k, s]) => h('option', { value: k, selected: k === st.mapSource }, s.name))),
-      h('button', { onclick: () => hh.lat ? map.setView([hh.lat, hh.lon], 15) : status('Set the home postcode on the Plan page first') }, icon('home-outline'), 'Home'),
+      h('button', { onclick: () => hh.lat ? map.setView([hh.lat, hh.lon], 15) : status('Set the home postcode on the Plan page first') }, 'Home'),
       h('span', { style: 'width:12px' }),
       h('b', null, 'Save for offline:'), maxZ,
       h('button', { class: 'primary', onclick: async () => {
@@ -113,11 +113,11 @@ export async function render(root) {
         if (!(await confirmBox(`Download up to ${est.count} tiles for the visible area (zoom ${z1} to ${maxZ.value})? Tiles already saved are skipped.`, 'Download'))) return;
         try { await window.api.tiles.download(st.mapSource, bounds, z1, Number(maxZ.value)); } catch (e) { status(e.message, 8000); }
       } }, icon('download'), 'Download visible area'),
-      h('button', { onclick: () => window.api.tiles.cancel() }, icon('stop'), 'Stop'),
+      h('button', { onclick: () => window.api.tiles.cancel() }, 'Stop'),
       dlInfo,
       h('span', { class: 'spacer' }),
       statsEl,
-      h('button', { class: 'small danger', onclick: async () => { if (await confirmBox('Delete all saved map tiles?', 'Delete', true)) { await window.api.tiles.clear(); refreshStats(); } } }, icon('delete-sweep-outline'), 'Clear cache')),
+      h('button', { class: 'small danger', onclick: async () => { if (await confirmBox('Delete all saved map tiles?', 'Delete', true)) { await window.api.tiles.clear(); refreshStats(); } } }, 'Clear cache')),
     prog,
     h('div', { class: 'split', style: 'flex:1;min-height:0;margin-top:4px' },
       h('div', { class: 'body' }, mapEl, h('div', { class: 'row small', style: 'padding-top:3px' }, coordEl, h('span', { class: 'spacer' }), h('span', { class: 'muted' }, 'Right-click the map to add a marker. Tiles you view are saved automatically.'))),
@@ -126,7 +126,7 @@ export async function render(root) {
         panel('Legend', h('div', { class: 'maplegend row' },
           h('span', null, icon('home-circle-outline'), ' Home'),
           Object.entries(TYPES).map(([k, c]) => h('span', null, h('span', { style: `display:inline-block;width:10px;height:10px;border-radius:50%;background:${c};margin-right:3px` }), k)))),
-        h('div', { class: 'note' }, 'Default maps: OpenTopoMap (OpenStreetMap data with contours), a free volunteer-run service. Area downloads are capped and paced to stay within fair use. For larger areas, add a tile provider whose terms allow offline caching in Settings (custom tile URL). Meeting points with coordinates from the Planner are shown in red.'))));
+        h('div', { class: 'note' }, 'Maps: OpenTopoMap (OpenStreetMap data), a free volunteer service, so downloads are capped. For larger areas set a custom tile provider in Settings. Meeting points from the Plan show in red.'))));
 
   setTimeout(() => { map.invalidateSize(); updateEstimate(); }, 50);
   refreshStats();

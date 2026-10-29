@@ -68,7 +68,7 @@ export async function render(root) {
           h('label', null, 'Vault password'), h('div', { class: 'row' }, pw, strength),
           h('label', null, 'Repeat password'), pw2,
           h('label', null, ''), h('div', null, h('button', { class: 'primary', onclick: go }, icon('lock-outline'), 'Create vault'))),
-        h('div', { class: 'note' }, 'A passphrase of three or four unrelated words is easy to remember and hard to guess. This password is separate from your Windows login.'))),
+        h('div', { class: 'note' }, 'Three or four unrelated words are easy to remember and hard to guess.'))),
       panel('How it works', h('ul', { class: 'small', style: 'margin:0;padding-left:18px;line-height:1.6' },
         h('li', null, 'Store scans and photos of passports, insurance policies, deeds, prescriptions and similar so you can get to them after a fire, flood or theft.'),
         h('li', null, 'Everything in the vault, including document names and notes, is encrypted on this computer with AES-256. Nothing is uploaded.'),
@@ -86,8 +86,8 @@ export async function render(root) {
           h('div', null, first ? 'Your vault is created. ' : '', 'This code unlocks the vault if you forget the password. It is shown once. Print it or write it down and keep it with your paper emergency plan, not on this computer.'),
           h('div', { class: 'mono', style: 'font-size:22px;font-weight:600;text-align:center;padding:10px;border:1px solid var(--line);background:var(--panel2);user-select:all' }, code),
           h('div', { class: 'row' },
-            h('button', { onclick: () => { navigator.clipboard.writeText(code); status('Copied'); } }, icon('content-copy'), 'Copy'),
-            h('button', { onclick: () => window.api.print.html(`<!doctype html><meta charset="utf-8"><body style="font-family:Segoe UI,sans-serif;padding:20mm"><h2>Holdfast Emergency Planning System: document vault recovery code</h2><p>Created ${new Date().toLocaleDateString('en-GB')}. Use this if the vault password is forgotten.</p><p style="font:600 26px Consolas,monospace;border:1px solid #000;padding:12px;text-align:center">${code}</p><p>Keep this with your paper emergency plan. Anyone with this code and access to the computer can open the vault.</p></body>`) }, icon('printer'), 'Print')),
+            h('button', { onclick: () => { navigator.clipboard.writeText(code); status('Copied'); } }, 'Copy'),
+            h('button', { onclick: () => window.api.print.html(`<!doctype html><meta charset="utf-8"><body style="font-family:Segoe UI,sans-serif;padding:20mm"><h2>Holdfast Emergency Planning System: document vault recovery code</h2><p>Created ${new Date().toLocaleDateString('en-GB')}. Use this if the vault password is forgotten.</p><p style="font:600 26px Consolas,monospace;border:1px solid #000;padding:12px;text-align:center">${code}</p><p>Keep this with your paper emergency plan. Anyone with this code and access to the computer can open the vault.</p></body>`) }, 'Print')),
           h('label', { class: 'chk' }, h('input', { type: 'checkbox', onchange: (e) => (cont.disabled = !e.target.checked) }), 'I have printed or written down the recovery code')),
         h('div', { class: 'df' }, cont));
       dlg.addEventListener('cancel', (e) => e.preventDefault());
@@ -261,25 +261,25 @@ export async function render(root) {
           if (!v) return;
           if (v.pw !== v.pw2) return status('Passwords do not match');
           try { await window.api.vault.changePassword(v.pw, false); st = await window.api.vault.status(); status('Password changed'); draw(); } catch (e) { status(e.message.replace(/^.*Error: /, ''), 8000); }
-        } }, icon('key-variant'), 'Change password'),
+        } }, 'Change password'),
         h('button', { onclick: async () => {
           if (!(await confirmBox('Make a new recovery code? The old code will stop working.', 'New code'))) return;
           const r = await window.api.vault.changePassword(null, true);
           await showRecoveryCode(r.recoveryCode, false);
-        } }, icon('shield-key-outline'), 'New recovery code')),
+        } }, 'New recovery code')),
       h('div', { class: 'row' },
-        h('button', { onclick: async () => { const r = await window.api.vault.backup(); if (r.ok) status('Encrypted backup saved to ' + r.path, 10000); } }, icon('content-save-outline'), 'Back up vault...'),
+        h('button', { onclick: async () => { const r = await window.api.vault.backup(); if (r.ok) status('Encrypted backup saved to ' + r.path, 10000); } }, 'Back up vault...'),
         h('button', { onclick: async () => {
           if (!(await confirmBox('Restore replaces this vault with the backup. The current vault is kept in the data folder as "vault-replaced-...". Continue?', 'Choose folder'))) return;
           try { const r = await window.api.vault.restore(); if (r.ok) { st = await window.api.vault.status(); status('Vault restored. Unlock it with the password it was backed up with.', 10000); draw(); } } catch (e) { status(e.message.replace(/^.*Error: /, ''), 8000); }
-        } }, icon('backup-restore'), 'Restore...'),
+        } }, 'Restore...'),
         h('button', { class: 'danger', onclick: async () => {
           const v = await promptForm('Delete the vault', [{ key: 'c', label: 'Type DELETE to permanently delete every document in the vault' }], 'Delete');
           if (!v || v.c !== 'DELETE') return;
           await window.api.vault.destroy();
           st = await window.api.vault.status();
           draw();
-        } }, icon('delete-outline'), 'Delete vault')),
+        } }, 'Delete vault')),
       h('div', { class: 'note' }, 'Backups stay encrypted and open with the same password or recovery code. Copy one to a USB stick for your grab bag.')));
   }
 
@@ -318,7 +318,7 @@ export async function render(root) {
         h('label', null, 'Notes'), h('textarea', { rows: 4, oninput: (e) => save('notes', e.target.value) }, it.notes || ''))),
       dropZone(panel('Files', h('div', null,
         h('div', { class: 'tbltools' },
-          h('button', { onclick: async () => { const a = await window.api.vault.pickFiles(it.id); if (a.length) { openFile = a[0].id; draw(); } } }, icon('upload-outline'), 'Add files...'),
+          h('button', { onclick: async () => { const a = await window.api.vault.pickFiles(it.id); if (a.length) { openFile = a[0].id; draw(); } } }, 'Add files...'),
           h('span', { class: 'muted small' }, 'or drop files here')),
         h('div', { class: 'tblwrap' }, h('table', { class: 'tbl' }, h('tbody', null, fileRows.length ? fileRows : h('tr', { class: 'empty' }, h('td', null, 'No files yet. Scan or photograph the document and add it here.'))))))),
       async (files) => { const a = await addDropped(files, it.id); if (a.length) openFile = a[0].id; draw(); }));
@@ -335,7 +335,7 @@ export async function render(root) {
           await window.api.vault.removeEntry(it.id);
           openId = null;
           draw();
-        } }, icon('delete-outline'), 'Delete document'),
+        } }, 'Delete document'),
         h('button', { class: 'primary', onclick: () => window.api.vault.lock() }, icon('lock-outline'), 'Lock now')),
       h('div', { class: 'split' }, side, h('div', { class: 'body' }, preview(it.files.find((f) => f.id === openFile)))));
   }
@@ -360,8 +360,8 @@ export async function render(root) {
       box.append(h('div', { class: 'stack', style: 'padding:20px' },
         h('div', null, `${f.name} (${f.type}, ${fmtBytes(f.size)}) cannot be previewed here.`),
         h('div', { class: 'row' },
-          h('button', { onclick: () => window.api.vault.openExternal(f.id).catch((e) => status(e.message, 8000)) }, icon('open-in-new'), 'Open in default program'),
-          h('button', { onclick: async () => { const r = await window.api.vault.saveCopy(f.id); if (r.ok) status('Saved to ' + r.path, 8000); } }, icon('download'), 'Save decrypted copy...')),
+          h('button', { onclick: () => window.api.vault.openExternal(f.id).catch((e) => status(e.message, 8000)) }, 'Open in default program'),
+          h('button', { onclick: async () => { const r = await window.api.vault.saveCopy(f.id); if (r.ok) status('Saved to ' + r.path, 8000); } }, 'Save decrypted copy...')),
         h('div', { class: 'note' }, 'Opening in another program writes a temporary decrypted copy. It is deleted when the vault locks.')));
     }
     return box;

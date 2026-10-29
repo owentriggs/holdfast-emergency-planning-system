@@ -52,8 +52,8 @@ export function render(root, params) {
   const side = h('div', { class: 'side', style: 'width:320px' },
     h('div', { class: 'panel', style: 'flex:1;display:flex;flex-direction:column;min-height:0;margin:0' },
       h('div', { class: 'ph' }, h('h3', null, 'Sections'), h('span', { class: 'spacer' }),
-        h('button', { class: 'small', onclick: () => { SECTIONS.forEach((s) => state.sections.add(s.id)); render(root, {}); } }, icon('printer-outline'), 'Print all'),
-        h('button', { class: 'small', onclick: () => { state.sections.clear(); render(root, {}); } }, icon('close'), 'Clear')),
+        h('button', { class: 'small', onclick: () => { SECTIONS.forEach((s) => state.sections.add(s.id)); render(root, {}); } }, 'Print all'),
+        h('button', { class: 'small', onclick: () => { state.sections.clear(); render(root, {}); } }, 'Clear')),
       h('div', { class: 'pb scroll', style: 'flex:1' },
         SECTIONS.map((s) => [
           chk(state.sections, s.id, s.label),
@@ -67,7 +67,7 @@ export function render(root, params) {
   const body = h('div', { class: 'body' },
     h('div', { class: 'row', style: 'margin-bottom:6px' },
       h('button', { class: 'primary', onclick: async () => { const r = await window.api.print.html(html(), 'print'); status(r.ok ? 'Sent to printer' : 'Print cancelled' + (r.reason ? ': ' + r.reason : '')); } }, icon('printer'), 'Print...'),
-      h('button', { onclick: async () => { const r = await window.api.print.html(html(), 'pdf'); if (r.ok) status('Saved ' + r.path, 8000); } }, icon('file-pdf-box'), 'Save as PDF...'),
+      h('button', { onclick: async () => { const r = await window.api.print.html(html(), 'pdf'); if (r.ok) status('Saved ' + r.path, 8000); } }, 'Save as PDF...'),
       h('span', { class: 'muted' }, 'Preview below is A4. Printed copies work when there is no power or internet.')),
     frame);
 

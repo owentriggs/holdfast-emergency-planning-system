@@ -1,5 +1,5 @@
 import * as store from '../lib/store.js';
-import { h, panel, editTable, chart, COLORS } from '../lib/ui.js';
+import { h, panel, editTable, chart, chartColors } from '../lib/ui.js';
 
 const DEFAULT_TOOLS = {
   battery: { wh: 500, efficiency: 85 },
@@ -37,7 +37,7 @@ export function render(root) {
     const on = t.loads.filter((l) => l.on && l.watts && l.hours);
     ch = chart(pwChart, {
       type: 'doughnut',
-      data: { labels: on.map((l) => l.name), datasets: [{ data: on.map((l) => l.watts * l.hours), backgroundColor: Object.values(COLORS) }] },
+      data: { labels: on.map((l) => l.name), datasets: [{ data: on.map((l) => l.watts * l.hours), backgroundColor: chartColors().series }] },
       options: { plugins: { legend: { position: 'right' }, title: { display: true, text: 'Share of daily Wh' } } },
     });
   };
@@ -97,14 +97,14 @@ export function render(root) {
       h('div', { class: 'stack' },
         panel('Water needed', h('div', { class: 'stack' },
           h('div', { class: 'form' }, ...num(t.water, 'days', 'Days'), ...num(t.water, 'drink', 'Drinking L / person / day', 0.5), ...num(t.water, 'wash', 'Washing L / person / day', 0.5), ...num(t.water, 'pets', 'Pets'), ...num(t.water, 'petLitres', 'L / pet / day', 0.1)),
-          waterOut, h('div', { class: 'note' }, 'GOV.UK: at least 3 litres per person per day for drinking, for 3 days, plus extra for cooking and washing. Household size comes from the Plan page.'))),
+          waterOut, h('div', { class: 'note' }, 'Household size comes from the Plan page.'))),
         panel('Power bank charges', h('div', { class: 'stack' },
           h('div', { class: 'form' }, ...num(t.bank, 'bankMah', 'Power bank mAh'), ...num(t.bank, 'phoneMah', 'Phone battery mAh'), ...num(t.bank, 'efficiency', 'Real-world efficiency %')),
           bankOut)),
         panel('Fridge and freezer during a power cut', h('div', { class: 'stack' },
           h('div', { class: 'form' }, h('label', null, 'Power went off at'), h('input', { type: 'datetime-local', value: t.powerOff, oninput: (e) => { t.powerOff = e.target.value; save(); calcFood(); } })),
           foodOut,
-          h('div', { class: 'note' }, 'Keep doors closed. Times are typical guidance figures; use a fridge thermometer where possible.'))))));
+          h('div', { class: 'note' }, 'Keep doors closed. Typical figures; check with a fridge thermometer.'))))));
   recalc();
   return () => ch && ch.destroy();
 }
