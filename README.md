@@ -6,6 +6,17 @@ It is a utility, not a website: dense tables, clear charts, everything saves aut
 
 > This app helps you prepare. It does not replace official warnings or professional advice. **In an emergency call 999.**
 
+## Download
+
+**[Download the latest release](https://github.com/owentriggs/emergency-planning-system/releases/latest)** (Windows 10 or 11, 64-bit)
+
+| File | Use it if |
+| --- | --- |
+| `Emergency.Planning.System.Setup.<version>.exe` | You want it installed with a Start menu shortcut. |
+| `Emergency.Planning.System.<version>.exe` | You want the portable version: no install, runs from anywhere, including a USB stick. |
+
+The files are not code-signed, so Windows SmartScreen may say it "protected your PC". Click **More info**, then **Run anyway**. The release notes list SHA-256 hashes so you can check your download (`Get-FileHash .\<file>.exe` in PowerShell).
+
 ## What it does
 
 | Area | What you get |
@@ -31,7 +42,7 @@ Each person in the household gets a printable card with their key medical detail
 
 ## Getting started
 
-1. **Install**: build the installer (see [Building from source](#building-from-source)) and run `Emergency Planning System Setup <version>.exe`, or run the portable `Emergency Planning System <version>.exe`, which needs no install.
+1. **Install**: [download](#download) and run the installer, or run the portable exe, which needs no install. You can also [build it yourself](#building-from-source).
 2. **Emergency Planner > Household**: enter your address and postcode (click "Look up" to fill in the map position), then add the people who live with you.
 3. **Contacts**: add at least two emergency contacts, including one outside your area, and tick ICE (In Case of Emergency).
 4. **Supplies**: click "Add suggestions" for a starter list, then enter what you actually have. The charts show how many days you could manage.
