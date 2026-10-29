@@ -189,7 +189,7 @@ async function withHtmlWindow(html, fn) {
   }
 }
 
-const PDF_FOOTER = '<div style="font-size:7pt;width:100%;text-align:center;color:#555">Page <span class="pageNumber"></span> of <span class="totalPages"></span></div>';
+const PDF_FOOTER = '<div style="font-family:Segoe UI,Arial,sans-serif;font-size:7pt;width:100%;margin:0 14mm;display:flex;justify-content:space-between;color:#5f6368"><span style="letter-spacing:0.6pt;text-transform:uppercase">Household emergency plan</span><span><span class="pageNumber"></span> / <span class="totalPages"></span></span></div>';
 const pdfOnce = (html) => withHtmlWindow(html, (pw) => pw.webContents.printToPDF({ pageSize: 'A4', printBackground: true, displayHeaderFooter: true, headerTemplate: '<span></span>', footerTemplate: PDF_FOOTER, margins: { marginType: 'custom', top: 0.4, bottom: 0.4, left: 0.4, right: 0.4 } }));
 
 // Page number of each named destination (an element id a link points at) in a PDF from printToPDF.

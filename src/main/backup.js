@@ -266,6 +266,8 @@ class UsbBackup {
     const m = this.readManifest(root);
     const base = this.loadBase(m && m.id);
     const out = { root, manifest: m, hasBase: !!base.plan, edited: this.editedSince(root, m), changes: [], usbChanges: 0, pcChanges: 0, vault: { state: 'none' } };
+    // What this computer changed since it last backed up to the drive: comparing with the base alone, every difference is ours.
+    out.since = base.plan ? mergePlan(base.plan, this.store.all(), base.plan).pcList : null;
     const usbPlan = this.readUsbPlan(root);
     if (usbPlan) {
       const r = mergePlan(base.plan, this.store.all(), usbPlan, choices);

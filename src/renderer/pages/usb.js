@@ -34,6 +34,7 @@ export async function render(root, params = {}) {
   let drives = [];
   let busy = false;
   let review = null; // { target, p, choices }
+  let since = null; // { list, created, hasBase }: what this PC changed since its last backup to the selected drive
   if (!est.vaultExists) opts.vault = false;
   if (!est.appAvailable) opts.app = false;
 
@@ -73,7 +74,28 @@ export async function render(root, params = {}) {
     try {
       const p = await window.api.usb.preview(path, choices);
       review = p.usbChanges || p.vault.state === 'locked' || p.vault.state === 'different' ? { target: path, p, choices } : null;
-    } catch (e) { review = null; }
+      since = p.manifest ? { list: p.since || [], created: p.manifest.created, hasBase: !!p.since } : null;
+    } catch (e) { review = null; since = null; }
+  }
+
+  function sincePanel() {
+    const what = (c) => (c.was === undefined ? ['Added', 'ok'] : c.now === undefined ? ['Removed', 'warn'] : ['Changed', 'info']);
+    const title = `Changes since the last backup${since.created ? ' on ' + fmtDate(since.created, true) : ''}`;
+    if (!since.hasBase) return panel(title, h('div', { class: 'muted small' }, 'The last backup on this drive was made on another computer or by an older version, so the changes cannot be listed. Everything is copied when you back up.'));
+    if (!since.list.length) return panel(title, h('div', { class: 'muted small' }, icon('check'), ' Nothing in the plan has changed. The drive is up to date.'));
+    return panel(title, h('div', { class: 'stack' },
+      h('div', { class: 'small' }, h('b', null, `${since.list.length} change(s)`), ' made on this PC will be copied to the drive.'),
+      h('div', { class: 'tblwrap', style: 'max-height:260px' }, h('table', { class: 'tbl' },
+        h('thead', null, h('tr', null, ['Section', 'Item', '', 'Was', 'Now'].map((l) => h('th', null, l)))),
+        h('tbody', null, since.list.map((c) => {
+          const [txt, cls] = what(c);
+          return h('tr', null,
+            h('td', { class: 'nowrap' }, c.label[0]),
+            h('td', null, c.label.slice(1).join(' > ')),
+            h('td', null, h('span', { class: 'pill ' + cls }, txt)),
+            h('td', { class: 'muted' }, fmtVal(c.was)),
+            h('td', null, fmtVal(c.now)));
+        }))))));
   }
 
   function reviewPanel() {
@@ -138,7 +160,7 @@ export async function render(root, params = {}) {
         stat('Map tiles', fmtBytes(est.tiles))),
       review ? reviewPanel() : null,
       h('div', { class: 'grid g21' },
-        h('div', { class: 'stack' }, drivePanel(), includePanel()),
+        h('div', { class: 'stack' }, drivePanel(), since && !review ? sincePanel() : null, includePanel()),
         h('div', { class: 'stack' }, restorePanel(), panel('Good practice', h('ul', { class: 'small', style: 'margin:0;padding-left:18px;line-height:1.6' },
           h('li', null, 'Back up after you change the plan, and at least monthly. The page warns after 30 days.'),
           h('li', null, 'Keep one drive in your grab bag and, if you can, one with a trusted person away from home.'),
@@ -150,7 +172,7 @@ export async function render(root, params = {}) {
     const rows = drives.map((d) => {
       const used = d.size - d.free;
       const sel = target && target.path === d.root;
-      return h('tr', { class: sel ? 'selected' : '', style: 'cursor:pointer', onclick: async () => { target = { path: d.root, label: `${d.id} ${d.label}`, drive: d }; if (d.manifest) await loadReview(d.root); else review = null; draw(); } },
+      return h('tr', { class: sel ? 'selected' : '', style: 'cursor:pointer', onclick: async () => { target = { path: d.root, label: `${d.id} ${d.label}`, drive: d }; if (d.manifest) await loadReview(d.root); else review = since = null; draw(); } },
         h('td', { style: 'width:24px;text-align:center' }, h('input', { type: 'radio', name: 'drv', checked: sel })),
         h('td', { class: 'nowrap' }, icon(d.removable ? 'usb-flash-drive-outline' : 'harddisk', 'muted'), ' ', h('b', null, d.id), ' ', d.label),
         h('td', null, d.type),
@@ -170,7 +192,7 @@ export async function render(root, params = {}) {
         h('button', { onclick: async () => { await loadDrives(); draw(); } }, icon('refresh'), 'Refresh'),
         h('button', { onclick: async () => {
           const r = await window.api.usb.chooseFolder('Choose a folder to back up into');
-          if (r) { target = { path: r.path, label: r.path, manifest: r.manifest }; if (r.manifest) await loadReview(r.path); else review = null; draw(); }
+          if (r) { target = { path: r.path, label: r.path, manifest: r.manifest }; if (r.manifest) await loadReview(r.path); else review = since = null; draw(); }
         } }, icon('folder-outline'), 'Choose a folder instead...'),
         custom ? h('span', { class: 'pill info' }, 'Folder: ' + target.path) : null,
         h('span', { class: 'spacer' }),
@@ -219,8 +241,8 @@ export async function render(root, params = {}) {
           r = await go(true);
         }
         status('Backup finished: ' + r.path, 10000);
-        review = null;
         await loadDrives();
+        await loadReview(target.path);
         est = await window.api.usb.estimate();
       } catch (e) {
         status('Backup failed: ' + errMsg(e), 10000);

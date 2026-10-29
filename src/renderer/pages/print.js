@@ -8,6 +8,7 @@ const state = {
   checklists: null, // null = all
   guides: null,
   pageBreaks: false,
+  cover: true,
 };
 
 export function render(root, params) {
@@ -31,7 +32,7 @@ export function render(root, params) {
     clearTimeout(t);
     t = setTimeout(() => (frame.srcdoc = html()), 150);
   };
-  const html = () => buildDocument([...state.sections], { checklistIds: [...state.checklists], guideIds: [...state.guides], pageBreaks: state.pageBreaks });
+  const html = () => buildDocument([...state.sections], { checklistIds: [...state.checklists], guideIds: [...state.guides], pageBreaks: state.pageBreaks, cover: state.cover });
 
   const chk = (set, id, label, after) => h('label', { class: 'chk', style: 'display:flex;padding:2px 0' },
     h('input', { type: 'checkbox', checked: set.has(id), onchange: (e) => { e.target.checked ? set.add(id) : set.delete(id); refresh(); after && after(); } }), label);
@@ -60,6 +61,7 @@ export function render(root, params) {
           s.id === 'firstaid' ? guideBox : null,
         ]),
         h('hr'),
+        h('label', { class: 'chk' }, h('input', { type: 'checkbox', checked: state.cover, onchange: (e) => { state.cover = e.target.checked; refresh(); } }), 'Cover page'),
         h('label', { class: 'chk' }, h('input', { type: 'checkbox', checked: state.pageBreaks, onchange: (e) => { state.pageBreaks = e.target.checked; refresh(); } }), 'Start each section on a new page'))));
 
   const body = h('div', { class: 'body' },

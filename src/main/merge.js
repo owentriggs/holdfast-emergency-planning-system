@@ -59,7 +59,7 @@ function decide(b, p, u, at, st) {
   else if (eq(p, b)) kind = 'usb';
   else if (eq(u, b)) kind = 'pc';
   else kind = 'conflict';
-  if (kind === 'pc') { st.pcChanges++; return p; }
+  if (kind === 'pc') { st.pcChanges++; st.pcList.push({ label: at.map((a) => a.label), was: b, now: p }); return p; }
   const id = at.map((a) => a.k).join('/');
   const def = kind === 'usb' || kind === 'only-usb' ? 'usb' : 'pc';
   const choice = st.choices[id] || def;
@@ -67,9 +67,10 @@ function decide(b, p, u, at, st) {
   return choice === 'usb' ? u : p;
 }
 
-// base, pc, usb: { key: value }. Returns { result, changed: [keys], changes, pcChanges }.
+// base, pc, usb: { key: value }. Returns { result, changed: [keys], changes, pcChanges, pcList }.
+// pcList: the changes made on this computer only, each { label, was, now }.
 function mergePlan(base, pc, usb, choices = {}, opts = {}) {
-  const st = { hasBase: !!base, choices, changes: [], pcChanges: 0 };
+  const st = { hasBase: !!base, choices, changes: [], pcChanges: 0, pcList: [] };
   const result = {};
   const changed = [];
   for (const k of new Set([...Object.keys(pc), ...Object.keys(usb)])) {
@@ -79,7 +80,7 @@ function mergePlan(base, pc, usb, choices = {}, opts = {}) {
     result[k] = v;
     if (!eq(v, pc[k])) changed.push(k);
   }
-  return { result, changed, changes: st.changes, pcChanges: st.pcChanges };
+  return { result, changed, changes: st.changes, pcChanges: st.pcChanges, pcList: st.pcList };
 }
 
 module.exports = { mergePlan, eq, SKIP_KEYS };

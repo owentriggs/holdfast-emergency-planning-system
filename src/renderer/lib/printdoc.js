@@ -4,61 +4,154 @@ import { esc, ageFrom, fmtDate } from './ui.js';
 import { NATIONAL_NUMBERS } from '../data/defaults.js';
 import { GUIDES, SOURCES, SEVERITY } from '../data/firstaid.js';
 
+// Brand red from the logo; everything else is black ink and greys so it photocopies well.
 const CSS = `
-@page { size: A4; margin: 12mm; }
+@page { size: A4; margin: 14mm 14mm 15mm; }
 * { box-sizing: border-box; }
-body { font-family: "Segoe UI", Arial, sans-serif; font-size: 10pt; color: #000; margin: 0; }
-h1 { font-size: 18pt; margin: 0 0 2mm; }
-h2 { font-size: 13pt; margin: 5mm 0 1.5mm; padding-bottom: 1mm; border-bottom: 2px solid #000; break-after: avoid; }
-h3 { font-size: 11pt; margin: 3mm 0 1mm; break-after: avoid; }
+body { font-family: "Segoe UI", Arial, sans-serif; font-size: 9.5pt; line-height: 1.35; color: #1b1b1b; margin: 0; counter-reset: sec; }
+h2 { font-size: 14pt; font-weight: 600; margin: 7mm 0 2mm; padding-top: 1.5mm; border-top: 0.75pt solid #1b1b1b; break-after: avoid; }
+section { counter-increment: sec; }
+section > h2:first-child::before { content: counter(sec, decimal-leading-zero); color: #b3261e; font-size: 10pt; font-weight: 700; margin-right: 3mm; vertical-align: 1.5pt; }
+h3 { font-size: 10.5pt; font-weight: 600; margin: 4mm 0 1mm; break-after: avoid; }
 p { margin: 1mm 0; }
-table { border-collapse: collapse; width: 100%; margin: 1mm 0 2mm; }
-th, td { border: 1px solid #777; padding: 1mm 1.5mm; text-align: left; vertical-align: top; font-size: 9pt; }
-th { background: #e6e6e6; }
+a { color: inherit; text-decoration: none; }
+table { border-collapse: collapse; width: 100%; margin: 0.5mm 0 2mm; }
+th { font-size: 6.5pt; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6pt; color: #5f6368; text-align: left; border-bottom: 0.75pt solid #1b1b1b; padding: 0.8mm 2mm 0.8mm 0; }
+td { font-size: 9pt; vertical-align: top; border-bottom: 0.4pt solid #d4d4d4; padding: 1.1mm 2mm 1.1mm 0; }
 tr { break-inside: avoid; }
-.meta { color: #444; font-size: 9pt; }
-.box { border: 2px solid #000; padding: 2mm 3mm; margin: 2mm 0; }
-.red { border-color: #b00; }
-.big { font-size: 16pt; font-weight: 700; }
-.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm; }
-ol, ul { margin: 1mm 0; padding-left: 6mm; }
-li { margin: 0.6mm 0; }
-.guide { break-inside: avoid; border-top: 1px solid #999; padding-top: 1.5mm; margin-bottom: 2.5mm; }
-.guide h3 { margin-top: 0; }
-.twocol { column-count: 2; column-gap: 6mm; }
-.toc { border: 1px solid #000; padding: 1.5mm 3mm; margin: 2mm 0; font-size: 8.5pt; }
-.toc ol { column-count: 3; column-gap: 5mm; margin: 1mm 0 0; padding: 0; list-style: none; }
-.toc li { display: flex; gap: 1mm; margin: 0.3mm 0; break-inside: avoid; }
-.toc li.sub { padding-left: 3mm; font-size: 8pt; }
-.toc li .dots { flex: 1; border-bottom: 1px dotted #888; margin-bottom: 1mm; }
-.toc a { color: #000; text-decoration: none; }
-.tick { width: 6mm; text-align: center; font-size: 12pt; }
-.sev { display: inline-block; border: 1px solid #000; padding: 0 2mm; font-size: 8pt; font-weight: 700; margin-left: 2mm; }
+.meta { color: #5f6368; font-size: 8pt; }
+.empty { color: #8a8a8a; font-size: 8.5pt; font-style: italic; margin: 0.5mm 0 2mm; }
+ol, ul { margin: 1mm 0; padding-left: 5mm; }
+li { margin: 0.5mm 0; break-inside: avoid; }
+li::marker { color: #5f6368; }
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 6mm; }
+.twocol { column-count: 2; column-gap: 7mm; column-rule: 0.4pt solid #e2e2e2; orphans: 3; widows: 3; }
+.guide { margin: 0 0 4mm; }
+.guide h3 { margin: 0 0 0.8mm; }
+.guide .lead { color: #444; font-style: italic; }
+.guide .sub { font-size: 7pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6pt; color: #5f6368; margin: 1.5mm 0 0; }
+.sev { font-size: 6.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5pt; border: 0.6pt solid currentColor; border-radius: 0.6mm; padding: 0 1mm; margin-left: 2mm; vertical-align: 1.5pt; white-space: nowrap; }
+.sev-call999 { color: #b3261e; }
+.sev-urgent { color: #8a5a00; }
+.sev-minor { color: #5f6368; }
+.tick { width: 5mm; }
+.tick i { display: inline-block; width: 3.2mm; height: 3.2mm; border: 0.75pt solid #1b1b1b; border-radius: 0.5mm; font-style: normal; font-size: 7pt; line-height: 3mm; text-align: center; }
 .pb { break-before: page; }
-.card { width: 85mm; border: 1px dashed #000; padding: 2mm; font-size: 8pt; display: inline-block; vertical-align: top; margin: 0 3mm 3mm 0; }
-.card table td, .card table th { font-size: 7.5pt; padding: 0.4mm 1mm; }
-.card .carer { border: 1.5px solid #000; padding: 1mm; margin: 1mm 0; }
+
+/* Masthead, used when there is no cover */
+.mast { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2pt solid #b3261e; padding-bottom: 2mm; margin-bottom: 3mm; }
+.mast .k { font-size: 7pt; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2pt; color: #b3261e; }
+.mast .t { font-size: 16pt; font-weight: 600; }
+
+/* Cover: fills the whole first sheet */
+@page cover { margin: 0; }
+.cover { page: cover; position: relative; width: 210mm; height: 296mm; overflow: hidden; break-after: page; }
+.cover svg.hex { position: absolute; left: 0; top: 0; }
+.cover .title { position: absolute; left: 22mm; right: 22mm; top: 168mm; }
+.cover .logo { width: 16mm; height: 16mm; display: block; margin-bottom: 7mm; }
+.cover .k { font-size: 9pt; font-weight: 700; text-transform: uppercase; letter-spacing: 2pt; color: #b3261e; }
+.cover h1 { font-size: 38pt; font-weight: 300; line-height: 1.05; margin: 2mm 0 6mm; letter-spacing: -0.5pt; }
+.cover .hh { font-size: 13pt; font-weight: 600; }
+.cover .addr { font-size: 10.5pt; color: #444; margin-top: 1mm; }
+.cover .foot { position: absolute; left: 22mm; right: 22mm; bottom: 18mm; display: flex; justify-content: space-between; align-items: flex-end; border-top: 0.75pt solid #1b1b1b; padding-top: 3mm; font-size: 8.5pt; color: #444; }
+.cover .foot b { display: block; font-size: 15pt; color: #b3261e; }
+
+/* Contents */
+.toc { margin: 0 0 2mm; }
+.toc h2 { margin-top: 0; }
+.toc ol { column-count: 3; column-gap: 6mm; margin: 0; padding: 0; list-style: none; font-size: 8.5pt; }
+.toc li { display: flex; gap: 1mm; margin: 0.4mm 0; }
+.toc li .n { color: #b3261e; font-weight: 700; width: 5mm; flex: none; }
+.toc li.top { font-weight: 600; margin-top: 1.2mm; }
+.toc li.sub { padding-left: 5mm; font-size: 7.5pt; color: #444; }
+.toc li .dots { flex: 1; border-bottom: 0.6pt dotted #9a9a9a; margin-bottom: 1.1mm; min-width: 2mm; }
+
+/* Summary */
+.sos { display: flex; flex-wrap: wrap; background: #fbeeed; border-left: 2.5mm solid #b3261e; margin: 0 0 3mm; }
+.sos div { padding: 1.6mm 4mm; border-right: 0.4pt solid #ecc9c6; }
+.sos div:last-child { border-right: 0; }
+.sos span { display: block; font-size: 6.5pt; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6pt; color: #8f1d17; }
+.sos b { font-size: 11pt; }
+.sos div:first-child b { font-size: 17pt; color: #b3261e; }
+
+/* Wallet cards: dashed lines are cutting guides */
+.card { width: 85mm; border: 0.75pt dashed #777; padding: 2.5mm; font-size: 8pt; display: inline-block; vertical-align: top; margin: 0 3mm 3mm 0; break-inside: avoid; }
+.card .ct { display: block; font-size: 7pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8pt; color: #b3261e; margin-bottom: 0.5mm; }
+.card td { font-size: 7.5pt; padding: 0.4mm 1mm 0.4mm 0; }
+.card .carer { border-left: 1.5mm solid #b3261e; background: #fbeeed; padding: 1mm 1.5mm; margin: 1mm 0; }
 .card .carer table { margin: 0.5mm 0 0; }
-.card { break-inside: avoid; }
-.footer { margin-top: 6mm; font-size: 8pt; color: #555; border-top: 1px solid #999; padding-top: 1mm; }
-.empty { color: #777; font-style: italic; }
-@media screen { body { padding: 10mm; } }
+.card .carer td { border-bottom-color: #ecc9c6; }
+.footer { margin-top: 6mm; font-size: 7.5pt; color: #5f6368; }
+@media screen { body { padding: 10mm; background: #fff; } .cover { margin: -10mm -10mm 10mm; box-shadow: 0 0 0 1px #ddd; } }
 `;
 
-function tbl(cols, rows, empty = 'None recorded') {
+// Columns with nothing in any row are left out, so sparse tables stay narrow and readable.
+function tbl(cols, rows, empty = 'Nothing recorded yet') {
   if (!rows.length) return `<p class="empty">${empty}</p>`;
-  return `<table><thead><tr>${cols.map((c) => `<th${c.w ? ` style="width:${c.w}"` : ''}>${esc(c.label)}</th>`).join('')}</tr></thead><tbody>${rows
-    .map((r) => `<tr>${cols.map((c) => `<td>${c.raw ? (c.get ? c.get(r) : r[c.key]) ?? '' : esc(c.get ? c.get(r) : r[c.key])}</td>`).join('')}</tr>`)
+  const val = (c, r) => (c.get ? c.get(r) : r[c.key]);
+  const used = cols.filter((c, i) => i === 0 || c.keep || rows.some((r) => { const v = val(c, r); return v != null && String(v).trim() !== ''; }));
+  return `<table><thead><tr>${used.map((c) => `<th${c.w ? ` style="width:${c.w}"` : ''}${c.cls ? ` class="${c.cls}"` : ''}>${esc(c.label)}</th>`).join('')}</tr></thead><tbody>${rows
+    .map((r) => `<tr>${used.map((c) => `<td${c.cls ? ` class="${c.cls}"` : ''}>${c.raw ? val(c, r) ?? '' : esc(val(c, r))}</td>`).join('')}</tr>`)
     .join('')}</tbody></table>`;
+}
+
+// Pointy-top hexagon field for the cover, densest at the top and fading out down the page. Units are mm.
+function hexField(w, h, r) {
+  const dx = Math.sqrt(3) * r;
+  const dy = 1.5 * r;
+  let seed = 11;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const tints = ['#b3261e', '#8f1d17', '#d9534f', '#e8a19c'];
+  let out = '';
+  for (let row = -1; row * dy < h + r; row++) {
+    for (let col = -1; col * dx < w + dx; col++) {
+      const cx = col * dx + (row % 2 ? dx / 2 : 0);
+      const cy = row * dy;
+      const fade = Math.max(0, 1 - cy / h) ** 1.4;
+      if (fade <= 0.02) continue;
+      const pts = [0, 1, 2, 3, 4, 5].map((i) => {
+        const a = (Math.PI / 180) * (60 * i - 30);
+        return `${(cx + r * 0.94 * Math.cos(a)).toFixed(2)},${(cy + r * 0.94 * Math.sin(a)).toFixed(2)}`;
+      }).join(' ');
+      const v = rnd();
+      const fill = v < 0.16 * fade ? tints[Math.floor(rnd() * tints.length)] : 'none';
+      const op = fill === 'none' ? 0 : (0.25 + 0.75 * rnd()) * fade;
+      out += `<polygon points="${pts}" fill="${fill}" fill-opacity="${op.toFixed(2)}" stroke="#b3261e" stroke-opacity="${(0.32 * fade).toFixed(2)}" stroke-width="0.3"/>`;
+    }
+  }
+  return `<svg class="hex" width="${w}mm" height="${h}mm" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">${out}</svg>`;
+}
+
+const LOGO = '<svg class="logo" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg"><rect x="8" y="8" width="240" height="240" rx="44" fill="#b3261e"/><path d="M128 40 L216 116 L216 210 L40 210 L40 116 Z" fill="none" stroke="#fff" stroke-width="18" stroke-linejoin="round"/><rect x="113" y="104" width="30" height="86" fill="#fff"/><rect x="85" y="132" width="86" height="30" fill="#fff"/></svg>';
+
+// Address lines without trailing commas, plus the postcode when the address does not already include it.
+function addressLines(hh) {
+  const lines = String(hh.address || '').split('\n').map((l) => l.trim().replace(/,+$/, '')).filter(Boolean);
+  const pc = String(hh.postcode || '').trim();
+  if (pc && !lines.some((l) => l.toUpperCase().includes(pc.toUpperCase()))) lines.push(pc);
+  return lines;
+}
+
+function cover() {
+  const hh = store.get('household');
+  const addr = addressLines(hh).join(', ');
+  return `<div class="cover">${hexField(210, 175, 9)}
+    <div class="title">${LOGO}
+      <div class="k">Keep this somewhere everyone can find it</div>
+      <h1>Household<br>Emergency Plan</h1>
+      ${hh.name ? `<div class="hh">${esc(hh.name)}</div>` : ''}
+      ${addr ? `<div class="addr">${esc(addr)}</div>` : ''}
+    </div>
+    <div class="foot"><div>In an emergency call<b>999 or 112</b></div><div style="text-align:right">Printed ${fmtDate(new Date().toISOString())}<br>Review every 6 months</div></div>
+  </div>`;
 }
 
 const nonEmpty = (rows, keys) => rows.filter((r) => keys.some((k) => r[k] != null && String(r[k]).trim() !== ''));
 
-// title: name in the contents. page: the section sits on its own pages (summary for the fridge, first aid as a
-// standalone reference, cards for cutting out).
+// title: name in the contents and the section heading.
 // sub: entries listed under the section in the contents, each { id, title } of an element inside it.
 export const SECTIONS = [
-  { id: 'summary', title: 'Summary', label: 'Summary page (address, people, key numbers)', build: summary, page: true },
+  { id: 'summary', title: 'Our household', label: 'Summary page (address, people, key numbers)', build: summary },
   { id: 'contacts', title: 'Contacts', label: 'Contacts and national numbers', build: contacts },
   { id: 'people', title: 'People and pets', label: 'People, medical details and pets', build: people },
   { id: 'medications', title: 'Medications', label: 'Medications', build: medications },
@@ -71,8 +164,8 @@ export const SECTIONS = [
   { id: 'supplies', title: 'Supplies and stock', label: 'Supplies and stock', build: supplies },
   { id: 'checklists', title: 'Checklists', label: 'Checklists', build: checklists, sub: (opts) => chosenChecklists(opts).map((c) => ({ id: 'cl-' + c.id, title: c.name })) },
   { id: 'kit', title: 'First aid kit', label: 'First aid kit inventory', build: kit },
-  { id: 'firstaid', title: 'First aid', label: 'First aid guides', build: firstaid, page: true, sub: (opts) => chosenGuides(opts).map((g) => ({ id: 'fa-' + g.id, title: g.title })) },
-  { id: 'cards', title: 'Wallet cards', label: 'Wallet cards (cut out)', build: cards, page: true },
+  { id: 'firstaid', title: 'First aid', label: 'First aid guides', build: firstaid, sub: (opts) => chosenGuides(opts).map((g) => ({ id: 'fa-' + g.id, title: g.title })) },
+  { id: 'cards', title: 'Wallet cards', label: 'Wallet cards (cut out)', build: cards },
 ];
 
 const chosenChecklists = (opts) => store.get('checklists').filter((c) => !opts.checklistIds || opts.checklistIds.includes(c.id));
@@ -82,12 +175,12 @@ function summary() {
   const hh = store.get('household');
   const ice = store.get('contacts').filter((c) => c.ice || c.category === 'Out-of-area contact').filter((c) => c.name || c.phone);
   const mp = nonEmpty(store.get('meeting'), ['name', 'address']);
-  return `
-  <div class="box red"><span class="big">Emergency: 999 or 112</span> &nbsp; NHS non-emergency: <b>111</b> &nbsp; Power cut: <b>105</b> &nbsp; Gas: <b>0800 111 999</b> &nbsp; Floodline: <b>0345 988 1188</b></div>
+  return `<h2>Our household</h2>
+  <div class="sos"><div><span>Emergency</span><b>999 or 112</b></div><div><span>NHS advice</span><b>111</b></div><div><span>Power cut</span><b>105</b></div><div><span>Gas leak</span><b>0800 111 999</b></div><div><span>Floodline</span><b>0345 988 1188</b></div></div>
   <div class="cols">
     <div>
       <h3>Address</h3>
-      <p>${esc(hh.address || '').replace(/\n/g, '<br>')}<br><b>${esc(hh.postcode || '')}</b></p>
+      <p>${addressLines(hh).map(esc).join('<br>')}</p>
       ${hh.what3words ? `<p>what3words: <b>///${esc(hh.what3words.replace(/^\/+/, ''))}</b></p>` : ''}
       ${hh.lat ? `<p>Lat/Lon: ${hh.lat.toFixed(5)}, ${hh.lon.toFixed(5)}</p>` : ''}
       ${hh.gridRef ? `<p>OS grid ref: ${esc(hh.gridRef)}</p>` : ''}
@@ -168,23 +261,23 @@ function supplies() {
 }
 
 function checklists(opts) {
-  return chosenChecklists(opts).map((c) => `
-    <h2 id="cl-${esc(c.id)}">${esc(c.name)}</h2>
-    ${tbl([{ label: '✓', raw: true, get: (r) => (r.done ? '&#9745;' : '&#9744;'), w: '6mm' }, { label: 'Item', key: 'text' }, { label: 'Qty / detail', key: 'qty', w: '22%' }, { label: 'Notes', key: 'note', w: '25%' }], c.items)}`).join('');
+  return '<h2>Checklists</h2>' + chosenChecklists(opts).map((c) => `
+    <h3 id="cl-${esc(c.id)}">${esc(c.name)}</h3>
+    ${tbl([{ label: '', raw: true, get: (r) => `<i>${r.done ? '&#10003;' : ''}</i>`, cls: 'tick' }, { label: 'Item', key: 'text', keep: true }, { label: 'Qty / detail', key: 'qty', w: '22%' }, { label: 'Notes', key: 'note', w: '25%' }], c.items)}`).join('');
 }
 
 function kit() {
-  return `<h2>First aid kit inventory</h2>
+  return `<h2>First aid kit</h2>
   ${tbl([{ label: 'Item', key: 'item' }, { label: 'Have', key: 'qty' }, { label: 'Target', key: 'target' }, { label: 'Expiry', get: (r) => fmtDate(r.expiry) }, { label: 'Location', key: 'location' }, { label: 'Notes', key: 'notes' }], store.get('firstAidKit'))}`;
 }
 
 export function guideHtml(g) {
   return `<div class="guide" id="fa-${esc(g.id)}">
-    <h3>${esc(g.title)}<span class="sev">${esc(SEVERITY[g.sev].label.toUpperCase())}</span></h3>
-    <p><i>${esc(g.summary)}</i></p>
+    <h3>${esc(g.title)}<span class="sev sev-${esc(g.sev)}">${esc(SEVERITY[g.sev].label)}</span></h3>
+    <p class="lead">${esc(g.summary)}</p>
     <ol>${g.steps.map((s) => `<li>${s}</li>`).join('')}</ol>
-    ${g.call && g.call.length ? `<p><b>Get help:</b></p><ul>${g.call.map((s) => `<li>${esc(s)}</li>`).join('')}</ul>` : ''}
-    ${g.dont && g.dont.length ? `<p><b>Do not:</b></p><ul>${g.dont.map((s) => `<li>${esc(s)}</li>`).join('')}</ul>` : ''}
+    ${g.call && g.call.length ? `<p class="sub">Get help</p><ul>${g.call.map((s) => `<li>${esc(s)}</li>`).join('')}</ul>` : ''}
+    ${g.dont && g.dont.length ? `<p class="sub">Do not</p><ul>${g.dont.map((s) => `<li>${esc(s)}</li>`).join('')}</ul>` : ''}
     ${g.notes ? `<p>${esc(g.notes)}</p>` : ''}
     <p class="meta">Source: ${g.src.map((s) => SOURCES[s].name).join(', ')}</p></div>`;
 }
@@ -219,9 +312,9 @@ function cards() {
     const shownIds = new Set(carers.map((c) => c.ref));
     const iceRows = ice.filter((c) => !shownIds.has('c:' + c.id)).slice(0, Math.max(1, 4 - carers.length));
     return `<div class="card">
-    <b>EMERGENCY CARD${p ? ': ' + esc(p.name) : ''}</b>${p && p.role ? ` <span class="meta">(${esc(p.role)})</span>` : ''}<br>
+    <span class="ct">Emergency card</span><b>${p ? esc(p.name) : 'Household'}</b>${p && p.role ? ` <span class="meta">(${esc(p.role)})</span>` : ''}<br>
     ${idLine.length ? esc(idLine.join(', ')) + '<br>' : ''}
-    ${esc(hh.address || '').split('\n')[0] || ''} ${esc(hh.postcode || '')}<br>
+    ${esc(addressLines(hh).slice(0, 1).concat(hh.postcode || []).filter((x, i, a) => a.indexOf(x) === i).join(', '))}<br>
     ${p && (p.conditions || p.allergies) ? `<b>Medical:</b> ${esc([p.conditions, p.allergies && 'Allergies: ' + p.allergies].filter(Boolean).join('. '))}<br>` : ''}
     ${p && p.needs ? `<b>Needs:</b> ${esc(p.needs)}<br>` : ''}
     ${carers.length ? `<div class="carer"><b>If I am found or need help, contact my parent / carer:</b>
@@ -238,20 +331,20 @@ function cards() {
 // The main process fills in the page numbers after a first layout pass:
 // each <!--pg:id-->...<!--/pg--> becomes the page the element with that id lands on.
 function contents(chosen, opts) {
-  const entry = (id, title, cls) => `<li${cls ? ` class="${cls}"` : ''}><a href="#${id}">${esc(title)}</a><span class="dots"></span><!--pg:${id}-->&ndash;<!--/pg--></li>`;
-  return `<nav class="toc"><b>Contents</b><ol>${chosen.map((s) => entry('sec-' + s.id, s.title) + (s.sub ? s.sub(opts).map((x) => entry(x.id, x.title, 'sub')).join('') : '')).join('')}</ol></nav>`;
+  const entry = (id, title, cls, n) => `<li class="${cls}">${n ? `<span class="n">${n}</span>` : ''}<a href="#${id}">${esc(title)}</a><span class="dots"></span><!--pg:${id}-->&ndash;<!--/pg--></li>`;
+  return `<nav class="toc"><h2>Contents</h2><ol>${chosen.map((s, i) => entry('sec-' + s.id, s.title, 'top', String(i + 1).padStart(2, '0'))
+    + (s.sub ? s.sub(opts).map((x) => entry(x.id, x.title, 'sub')).join('') : '')).join('')}</ol></nav>`;
 }
 
+// opts: { checklistIds, guideIds, pageBreaks: each section on a new page, cover: false to leave out the cover page }
 export function buildDocument(sectionIds, opts = {}) {
   const chosen = SECTIONS.filter((s) => sectionIds.includes(s.id));
-  const parts = chosen.map((s, i) => {
-    const pb = i && (opts.pageBreaks || s.page || chosen[i - 1].page);
-    return `<section id="sec-${s.id}"${pb ? ' class="pb"' : ''}>${s.build(opts)}</section>`;
-  });
+  const parts = chosen.map((s, i) => `<section id="sec-${s.id}"${i && opts.pageBreaks ? ' class="pb"' : ''}>${s.build(opts)}</section>`);
   const hh = store.get('household');
+  const full = chosen.length > 1;
+  const head = full && opts.cover !== false ? cover()
+    : `<div class="mast"><div><div class="k">Household emergency plan</div><div class="t">${esc(hh.name || 'Our household')}</div></div><div class="meta">Printed ${fmtDate(new Date().toISOString(), true)}</div></div>`;
   return `<!doctype html><html><head><meta charset="utf-8"><title>Emergency Plan</title><style>${CSS}</style></head><body>
-  <h1>Household Emergency Plan</h1>
-  <p class="meta">${esc(hh.name || '')} &middot; Printed ${fmtDate(new Date().toISOString(), true)}</p>
-  ${chosen.length > 1 || chosen.some((s) => s.sub) ? contents(chosen, opts) : ''}${parts.join('')}
-  <div class="footer">Holdfast Emergency Planning System &middot; Printed ${fmtDate(new Date().toISOString(), true)} &middot; Review regularly and keep with your important documents.</div></body></html>`;
+  ${head}${full || chosen.some((s) => s.sub) ? contents(chosen, opts) : ''}${parts.join('')}
+  <div class="footer">Made with Holdfast Emergency Planning System. Review it every six months and after any big change.</div></body></html>`;
 }
