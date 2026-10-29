@@ -6,6 +6,7 @@ const ROLES = ['', 'Adult', 'Parent / carer', 'Child', 'Older person', 'Dependan
 
 let activeTab = 'household';
 let activeScenario = null;
+let activePerson = null;
 
 // Shown above a tab only where it saves a mistake.
 const HELP = {
@@ -51,6 +52,71 @@ export function render(root, params = {}) {
 
 const save = (k) => () => store.save(k);
 
+// People: a list on the left and the selected person's details as a form, like Checklists.
+function peopleEditor(hh, carerOptions) {
+  const wrap = h('div', { class: 'split', style: 'min-height:260px' });
+  const save = () => store.save('household');
+  const draw = () => {
+    const people = hh.people;
+    if (!people.find((x) => x.id === activePerson)) activePerson = people[0] && people[0].id;
+    const p = people.find((x) => x.id === activePerson);
+    const item = (x) => h('div', { class: 'li' + (x === p ? ' active' : ''), onclick: () => { activePerson = x.id; draw(); } },
+      h('span', null, x.name || 'Unnamed'), h('span', { class: 'spacer' }),
+      h('span', { class: 'sub' }, [x.role, ageFrom(x.dob)].filter((v) => v !== '' && v != null).join(', ')));
+    const side = h('div', { class: 'side' },
+      h('div', { class: 'list' }, people.length ? people.map(item) : h('div', { class: 'li muted' }, 'No one added yet')),
+      h('div', { class: 'row', style: 'margin-top:6px' },
+        h('button', { onclick: () => {
+          const x = { id: uid(), name: '' };
+          people.push(x);
+          activePerson = x.id;
+          save();
+          draw();
+          wrap.querySelector('.body input').focus();
+        } }, 'Add person')));
+
+    let body;
+    if (p) {
+      // Name, role and date of birth also show in the list, so keep that row in step while typing.
+      const touch = () => { const li = side.querySelector('.li.active'); if (li) li.replaceWith(item(p)); };
+      const field = (key, label, type = 'text', opts = {}) => {
+        const set = (v) => { p[key] = v; save(); if (key === 'name' || key === 'role' || key === 'dob') touch(); };
+        let inp;
+        if (type === 'select') inp = h('select', { onchange: (e) => set(e.target.value) },
+          (typeof opts.options === 'function' ? opts.options(p) : opts.options).map((o) => h('option', { value: o.value ?? o, selected: (o.value ?? o) === (p[key] ?? '') }, o.label ?? o)));
+        else if (type === 'textarea') inp = h('textarea', { rows: 2, placeholder: opts.placeholder || '', oninput: (e) => set(e.target.value) }, p[key] || '');
+        else if (type === 'checkbox') inp = h('label', { class: 'chk' }, h('input', { type: 'checkbox', checked: !!p[key], onchange: (e) => set(e.target.checked) }), opts.text);
+        else inp = h('input', { type, value: p[key] ?? '', placeholder: opts.placeholder || '', oninput: (e) => set(e.target.value) });
+        return [h('label', { title: opts.title || null }, label), inp];
+      };
+      body = h('div', { class: 'stack' },
+        h('div', { class: 'form two' },
+          ...field('name', 'Name'),
+          ...field('role', 'Role', 'select', { options: ROLES, title: 'Children and dependants get their parent or carer details on their emergency card' }),
+          ...field('dob', 'Date of birth', 'date'),
+          ...field('mobile', 'Mobile'),
+          ...field('carer1', 'Parent / carer', 'select', { options: carerOptions, title: 'Shown on their emergency card. Pick someone in the household or a contact.' }),
+          ...field('carer2', 'Second carer', 'select', { options: carerOptions }),
+          ...field('blood', 'Blood group', 'select', { options: ['', 'O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'Unknown'] }),
+          ...field('nhs', 'NHS no.'),
+          ...field('allergies', 'Allergies'),
+          ...field('psr', 'PSR', 'checkbox', { text: 'On the Priority Services Register' }),
+          ...field('conditions', 'Medical conditions', 'textarea'),
+          ...field('needs', 'Support needs', 'textarea', { placeholder: 'Mobility, hearing, sight, care, equipment needing power' })),
+        h('div', { class: 'row' }, h('span', { class: 'spacer' }),
+          h('button', { class: 'danger', onclick: async () => {
+            if ((p.name || p.dob || p.mobile) && !(await confirmBox(`Delete ${p.name || 'this person'}?`, 'Delete', true))) return;
+            people.splice(people.indexOf(p), 1);
+            save();
+            draw();
+          } }, 'Delete person')));
+    } else body = h('div', { class: 'muted' }, 'Add the people who live here.');
+    wrap.replaceChildren(side, h('div', { class: 'body' }, body));
+  };
+  draw();
+  return wrap;
+}
+
 const VIEWS = {
   household() {
     const hh = store.get('household');
@@ -84,21 +150,7 @@ const VIEWS = {
     if (hh.people.some((p) => !p.id)) { hh.people.forEach((p) => (p.id = p.id || uid())); store.save('household'); }
     const carerOptions = (row) => ['', ...hh.people.filter((p) => p !== row && p.name).map((p) => ({ value: 'p:' + p.id, label: p.name })),
       ...store.get('contacts').filter((c) => c.name).map((c) => ({ value: 'c:' + c.id, label: c.name + (c.relation ? ` (${c.relation})` : ' (contact)') }))];
-    const people = editTable([
-      { key: 'name', label: 'Name', width: '140px' },
-      { key: 'role', label: 'Role', type: 'select', options: ROLES, width: '135px', title: 'Children and dependants get their parent or carer details on their emergency card' },
-      { key: 'carer1', label: 'Parent / carer', type: 'select', options: carerOptions, width: '130px', title: 'Shown on their emergency card. Pick someone in the household or a contact.' },
-      { key: 'carer2', label: 'Second carer', type: 'select', options: carerOptions, width: '130px' },
-      { key: 'dob', label: 'Date of birth', type: 'date', width: '120px' },
-      { key: 'age', label: 'Age', type: 'ro', num: true, compute: (r) => ageFrom(r.dob), width: '40px' },
-      { key: 'mobile', label: 'Mobile', width: '135px' },
-      { key: 'conditions', label: 'Medical conditions', type: 'textarea' },
-      { key: 'allergies', label: 'Allergies' },
-      { key: 'blood', label: 'Blood', type: 'select', options: ['', 'O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'Unknown'], width: '70px' },
-      { key: 'needs', label: 'Support needs', type: 'textarea', title: 'Mobility, hearing, sight, care, equipment needing power' },
-      { key: 'nhs', label: 'NHS no.', width: '100px' },
-      { key: 'psr', label: 'PSR', type: 'checkbox', width: '36px', title: 'Registered on Priority Services Register' },
-    ], hh.people, () => { store.save('household'); }, { addLabel: 'Add person' });
+    const people = peopleEditor(hh, carerOptions);
 
     const pets = editTable([
       { key: 'name', label: 'Name', width: '120px' },

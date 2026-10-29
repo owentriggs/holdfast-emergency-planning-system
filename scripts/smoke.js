@@ -56,6 +56,9 @@ app.on('browser-window-created', (_e, win) => {
       await js(`window.go('dashboard')`);
       await wait(1500);
       await shot('deep-dashboard');
+      await js(`window.go('planner', { tab: 'household' })`);
+      await wait(1000);
+      await shot('deep-planner');
       const html = await js(`import('./lib/printdoc.js').then(m => m.buildDocument(m.SECTIONS.map(s => s.id), { pageBreaks: true }))`);
       const tmp = path.join(out, 'plan.html');
       fs.writeFileSync(tmp, html);

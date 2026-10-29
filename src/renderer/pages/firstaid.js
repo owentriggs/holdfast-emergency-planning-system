@@ -9,10 +9,11 @@ let query = '';
 let sevFilter = '';
 const selected = new Set();
 
-export function render(root) {
+export function render(root, params = {}) {
+  if (params.tab) tab = params.tab;
   const draw = () => {
     root.replaceChildren(
-      tabs([{ id: 'guides', label: 'Guides', count: GUIDES.length }, { id: 'kit', label: 'First Aid Kit Inventory', count: store.get('firstAidKit').length }], tab, (id) => { tab = id; draw(); }),
+      tabs([{ id: 'guides', label: 'Guides', count: GUIDES.length }, { id: 'kit', label: 'Kit', count: store.get('firstAidKit').length }], tab, (id) => { tab = id; draw(); }),
       tab === 'guides' ? guides() : kit());
   };
   draw();
