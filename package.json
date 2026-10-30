@@ -11,7 +11,8 @@
     "launcher": "node scripts/build-launcher.js",
     "icons": "electron scripts/build-icons.js",
     "smoke": "electron scripts/smoke.js",
-    "installer-art": "electron scripts/build-installer-art.js"
+    "installer-art": "electron scripts/build-installer-art.js",
+    "dist:mac": "electron-builder --mac dir --arm64 --x64 --publish never"
   },
   "build": {
     "appId": "uk.local.emergencyplanner",
@@ -24,15 +25,26 @@
       "!node_modules/pdfjs-dist/build/*.map",
       "package.json"
     ],
-    "extraResources": [
-      { "from": "build/launcher.exe", "to": "launcher.exe" }
-    ],
     "win": {
       "target": [
         "nsis",
         "portable"
       ],
-      "icon": "build/icon.ico"
+      "icon": "build/icon.ico",
+      "extraResources": [
+        {
+          "from": "build/launcher.exe",
+          "to": "launcher.exe"
+        }
+      ]
+    },
+    "mac": {
+      "target": [
+        "dir"
+      ],
+      "icon": "build/icon-mac.png",
+      "category": "public.app-category.lifestyle",
+      "identity": null
     },
     "nsis": {
       "differentialPackage": false,

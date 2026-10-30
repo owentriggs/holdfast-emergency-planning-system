@@ -84,7 +84,7 @@ function createWindow() {
     minWidth: 1000,
     minHeight: 640,
     title: 'Holdfast Emergency Preparation System',
-    icon: path.join(ASSETS, 'icon.ico'),
+    icon: process.platform === 'darwin' ? undefined : path.join(ASSETS, 'icon.ico'),
     backgroundColor: '#f3f3f3',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -130,7 +130,7 @@ app.on('web-contents-created', (_e, wc) => {
   });
 });
 
-app.setAppUserModelId('uk.local.emergencyplanner');
+if (process.platform === 'win32') app.setAppUserModelId('uk.local.emergencyplanner');
 
 app.whenReady().then(() => {
   const dataRoot = path.join(app.getPath('userData'));
@@ -175,9 +175,12 @@ app.whenReady().then(() => {
     if (vault.isUnlocked() && mins > 0 && powerMonitor.getSystemIdleTime() >= mins * 60) vault.lock();
   }, 15000);
 
+  // macOS needs the app menu, and Quit lives there rather than in File.
+  const mac = process.platform === 'darwin';
   Menu.setApplicationMenu(
     Menu.buildFromTemplate([
-      { label: 'File', submenu: [{ label: 'Print...', accelerator: 'Ctrl+P', click: () => emit('nav', 'print') }, { type: 'separator' }, { role: 'quit' }] },
+      ...(mac ? [{ role: 'appMenu' }] : []),
+      { label: 'File', submenu: [{ label: 'Print...', accelerator: 'CmdOrCtrl+P', click: () => emit('nav', 'print') }, ...(mac ? [] : [{ type: 'separator' }, { role: 'quit' }])] },
       { label: 'Edit', submenu: [{ role: 'undo' }, { role: 'redo' }, { type: 'separator' }, { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'selectAll' }] },
       { label: 'View', submenu: [{ role: 'reload' }, { role: 'toggleDevTools' }, { type: 'separator' }, { role: 'resetZoom' }, { role: 'zoomIn' }, { role: 'zoomOut' }, { type: 'separator' }, { role: 'togglefullscreen' }] },
     ])

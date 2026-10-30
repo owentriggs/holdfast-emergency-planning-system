@@ -1,0 +1,39 @@
+# Builds the macOS app on GitHub's Macs (free for public repositories). Run it from the Actions tab
+# ("Mac build" > "Run workflow"), or push a v* tag. Download the zips from the run's "Artifacts".
+#
+# There is no Apple Developer certificate, so each app gets a free ad-hoc signature instead, which Apple Silicon
+# Macs need before they will open it at all. The first time, macOS still says it is from an unidentified
+# developer: right-click the app and choose Open (or System Settings > Privacy & Security > Open Anyway).
+name: Mac build
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+jobs:
+  mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run dist:mac
+      - name: Sign ad hoc and zip
+        run: |
+          version=$(node -p "require('./package.json').version")
+          for pair in "dist/mac-arm64:apple-silicon" "dist/mac:intel"; do
+            dir=${pair%%:*}; arch=${pair##*:}
+            app=$(ls -d "$dir"/*.app)
+            codesign --force --deep --sign - "$app"
+            codesign --verify --deep "$app"
+            ditto -c -k --keepParent "$app" "dist/Holdfast-$version-mac-$arch.zip"
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: holdfast-mac
+          path: dist/*.zip
+          if-no-files-found: error

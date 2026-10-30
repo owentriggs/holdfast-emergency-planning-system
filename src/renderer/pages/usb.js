@@ -50,7 +50,7 @@ export async function render(root, params = {}) {
     if (target && target.drive && !drives.find((d) => d.root === target.path)) target = null;
     if (!target) {
       const d = drives.find((x) => x.removable) || null;
-      if (d) target = { path: d.root, label: `${d.id} ${d.label}`, drive: d };
+      if (d) target = { path: d.root, label: `${d.name} ${d.label}`.trim(), drive: d };
     } else if (target.drive) target.drive = drives.find((d) => d.root === target.path);
   }
 
@@ -164,9 +164,9 @@ export async function render(root, params = {}) {
     const rows = drives.map((d) => {
       const used = d.size - d.free;
       const sel = target && target.path === d.root;
-      return h('tr', { class: sel ? 'selected' : '', style: 'cursor:pointer', onclick: async () => { target = { path: d.root, label: `${d.id} ${d.label}`, drive: d }; if (d.manifest) await loadReview(d.root); else review = since = null; draw(); } },
+      return h('tr', { class: sel ? 'selected' : '', style: 'cursor:pointer', onclick: async () => { target = { path: d.root, label: `${d.name} ${d.label}`.trim(), drive: d }; if (d.manifest) await loadReview(d.root); else review = since = null; draw(); } },
         h('td', { style: 'width:24px;text-align:center' }, h('input', { type: 'radio', name: 'drv', checked: sel })),
-        h('td', { class: 'nowrap' }, icon(d.removable ? 'usb-flash-drive-outline' : 'harddisk', 'muted'), ' ', h('b', null, d.id), ' ', d.label),
+        h('td', { class: 'nowrap' }, icon(d.removable ? 'usb-flash-drive-outline' : 'harddisk', 'muted'), ' ', h('b', null, d.name), ' ', d.label),
         h('td', null, d.type),
         h('td', null, d.fs),
         h('td', { style: 'min-width:140px' }, bar(used / d.size, used / d.size > 0.9 ? 'bad' : ''), h('span', { class: 'small muted' }, `${fmtBytes(d.free)} free of ${fmtBytes(d.size)}`)),
@@ -256,7 +256,7 @@ export async function render(root, params = {}) {
         opt('vault', 'Document vault', est.vault, est.vaultExists ? 'Copied still encrypted. Opens with your vault password or recovery code.' : 'No vault set up yet.', !est.vaultExists),
         opt('library', 'Offline library', est.library, 'Saved web pages (GOV.UK, NHS and so on).'),
         opt('tiles', 'Offline map tiles', est.tiles, 'Maps you downloaded for offline use.'),
-        opt('app', 'Copy of this program', est.appAvailable ? est.app : null, est.appAvailable ? 'Run it from the drive on any Windows PC; it opens the backup directly.' : 'Only available in the installed app.', !est.appAvailable)))),
+        opt('app', 'Copy of this program', est.appAvailable ? est.app : null, est.appAvailable ? 'Run it from the drive on any Windows PC; it opens the backup directly.' : est.appNote, !est.appAvailable)))),
       h('div', { class: 'row' },
         runBtn, cancelBtn,
         h('span', { class: tooBig ? '' : 'muted' , style: tooBig ? 'color:var(--red)' : '' }, `About ${fmtBytes(total)}`, free != null ? ` to copy, ${fmtBytes(free)} free` : '', tooBig ? '. Not enough space.' : ''),
@@ -282,7 +282,7 @@ export async function render(root, params = {}) {
     const fromDrive = drives.filter((d) => d.manifest && d.manifest.complete);
     return panel('Restore from a backup', h('div', { class: 'stack' },
       h('div', { class: 'row' },
-        fromDrive.map((d) => h('button', { onclick: () => { restoreFrom = { path: d.root, manifest: d.manifest }; draw(); } }, `${d.id} ${d.label}`)),
+        fromDrive.map((d) => h('button', { onclick: () => { restoreFrom = { path: d.root, manifest: d.manifest }; draw(); } }, `${d.name} ${d.label}`.trim())),
         h('button', { onclick: pick }, 'Choose folder...')),
       m ? h('div', { class: 'stack' },
         h('div', { class: 'kv small' },
@@ -312,7 +312,7 @@ export async function render(root, params = {}) {
   if (params.path) target = { path: params.path, label: params.path };
   if (params.review || params.drive) {
     const d = drives.find((x) => x.id === (params.review || params.drive));
-    if (d) target = { path: d.root, label: `${d.id} ${d.label}`, drive: d };
+    if (d) target = { path: d.root, label: `${d.name} ${d.label}`.trim(), drive: d };
   }
   if (target && (params.review || params.drive || params.path || (target.drive && target.drive.manifest))) await loadReview(target.path);
   // A drive edited elsewhere was plugged in while this page is open.
@@ -320,7 +320,7 @@ export async function render(root, params = {}) {
     if (busy || review || !list.length) return;
     await loadDrives();
     const d = drives.find((x) => x.id === list[0].drive);
-    if (d) { target = { path: d.root, label: `${d.id} ${d.label}`, drive: d }; await loadReview(d.root); draw(); }
+    if (d) { target = { path: d.root, label: `${d.name} ${d.label}`.trim(), drive: d }; await loadReview(d.root); draw(); }
   }));
   // A drive was plugged in, removed or ejected from the sidebar.
   offs.push(window.api.on('usb:present', async () => { if (!busy) { await loadDrives(); draw(); } }));

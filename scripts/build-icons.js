@@ -1,4 +1,5 @@
-// Renders src/assets/logo.svg to PNGs and a multi-size Windows .ico (PNG-compressed entries).
+// Renders src/assets/logo.svg to PNGs, a multi-size Windows .ico (PNG-compressed entries) and a 1024px PNG that
+// electron-builder turns into the macOS .icns.
 // Usage: npx electron scripts/build-icons.js
 const { app, BrowserWindow } = require('electron');
 const fs = require('fs');
@@ -12,7 +13,7 @@ app.disableHardwareAcceleration();
 app.whenReady().then(async () => {
   const win = new BrowserWindow({ show: false, width: 256, height: 256, frame: false, transparent: true, webPreferences: { offscreen: true } });
   const pngs = {};
-  for (const s of SIZES) {
+  for (const s of [...SIZES, 1024]) {
     win.setContentSize(s, s);
     const html = `<html><body style="margin:0;background:transparent">${SVG.replace('<svg ', `<svg width="${s}" height="${s}" `)}</body></html>`;
     await win.loadURL('data:text/html;base64,' + Buffer.from(html).toString('base64'));
@@ -23,6 +24,7 @@ app.whenReady().then(async () => {
   const outDir = path.join(ROOT, 'build');
   fs.mkdirSync(outDir, { recursive: true });
   fs.writeFileSync(path.join(outDir, 'icon.png'), pngs[256]);
+  fs.writeFileSync(path.join(outDir, 'icon-mac.png'), pngs[1024]);
   fs.writeFileSync(path.join(ROOT, 'src', 'assets', 'icon-256.png'), pngs[256]);
   fs.writeFileSync(path.join(ROOT, 'src', 'assets', 'icon-32.png'), pngs[32]);
 

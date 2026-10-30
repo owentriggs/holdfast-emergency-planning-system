@@ -106,7 +106,7 @@ function syncNote(list) {
   const el = document.getElementById('syncnote');
   const d = list && list[0];
   el.replaceChildren(d ? h('button', { class: 'syncnote', title: 'The copy of the program on this drive was used on another computer', onclick: () => go('usb', { review: d.drive }) },
-    icon('usb-flash-drive-outline'), `${d.drive} has ${d.usbChanges ? d.usbChanges + ' change(s)' : 'changes'} from another computer. Review`) : '');
+    icon('usb-flash-drive-outline'), `${d.name || d.drive} has ${d.usbChanges ? d.usbChanges + ' change(s)' : 'changes'} from another computer. Review`) : '');
 }
 
 // Holdfast backup drives that are plugged in, shown at the bottom of the sidebar with an eject button.
@@ -119,21 +119,22 @@ function usbDrives(list) {
     const busy = ejecting.has(d.drive);
     return h('div', { class: 'usbitem' + (changes ? ' changed' : ''), title: 'Open USB backup for this drive', onclick: () => go('usb', { drive: d.drive }) },
       icon('usb-flash-drive'),
-      h('div', { class: 't' }, h('b', null, `Holdfast drive (${d.drive})`),
+      h('div', { class: 't' }, h('b', null, `Holdfast drive (${d.name || d.drive})`),
         h('small', null, busy ? 'Ejecting...' : changes ? 'Has changes from another PC' : d.complete ? 'Backup ' + fmtDate(d.created) : 'Unfinished backup')),
       h('button', { class: 'eject', title: 'Eject so it is safe to remove', disabled: busy, onclick: (e) => { e.stopPropagation(); ejectDrive(d.drive); } }, icon('eject')));
   }));
 }
 
 export async function ejectDrive(drive) {
+  const name = drive.split('/').pop(); // the volume name on macOS, the drive letter on Windows
   ejecting.add(drive);
   usbDrives();
-  status(`Ejecting ${drive}...`, 0);
+  status(`Ejecting ${name}...`, 0);
   try {
     await window.api.usb.eject(drive);
-    status(`${drive} ejected`);
+    status(`${name} ejected`);
     presentList = presentList.filter((d) => d.drive !== drive);
-    await messageBox('Safe to remove hardware', `The Holdfast drive (${drive}) can now be safely removed from the computer.`, 'check-circle-outline');
+    await messageBox('Safe to remove hardware', `The Holdfast drive (${name}) can now be safely removed from the computer.`, 'check-circle-outline');
     return true;
   } catch (e) {
     status('');

@@ -48,7 +48,7 @@ h4 { font-size: 12px; }
 p { margin: 4px 0; }
 .muted { color: var(--muted); }
 .small { font-size: 11px; }
-.mono { font-family: Consolas, "Cascadia Mono", monospace; }
+.mono { font-family: Consolas, "Cascadia Mono", Menlo, monospace; }
 .spacer { flex: 1; }
 .nowrap { white-space: nowrap; }
 .right { text-align: right; }

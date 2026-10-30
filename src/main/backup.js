@@ -39,9 +39,23 @@ const DRIVE_TYPES = { 2: 'Removable', 3: 'Local disk', 4: 'Network', 5: 'CD/DVD'
 // Test scripts set this so a real backup drive that happens to be plugged in is never listed, compared or written to.
 const IGNORE_DRIVES = process.env.HOLDFAST_IGNORE_DRIVES === '1';
 
-function ps(command) {
-  return new Promise((resolve, reject) => execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', command], { windowsHide: true, timeout: 20000 }, (err, out) => (err ? reject(err) : resolve(out))));
+const MAC = process.platform === 'darwin';
+
+function run(file, args) {
+  return new Promise((resolve, reject) => execFile(file, args, { windowsHide: true, timeout: 20000 }, (err, out) => (err ? reject(err) : resolve(out))));
 }
+const ps = (command) => run('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', command]);
+
+// Where other drives are mounted: drive letters D: to Z: on Windows, /Volumes on macOS (leaving out the startup disk, which links to /).
+function mountPoints() {
+  if (!MAC) return Array.from({ length: 23 }, (_, i) => String.fromCharCode(68 + i) + ':');
+  let names = [];
+  try { names = fs.readdirSync('/Volumes'); } catch (e) { /* none */ }
+  return names.map((n) => path.join('/Volumes', n)).filter((p) => { try { return fs.realpathSync(p) !== '/'; } catch (e) { return false; } });
+}
+const onDrive = (dir, drive) => (dir + path.sep).toUpperCase().startsWith((drive + path.sep).toUpperCase());
+// What the sidebar and USB page call a drive: its letter on Windows, its volume name on macOS.
+const driveName = (drive) => (MAC ? path.basename(drive) : drive);
 
 function walk(dir, base = dir, out = []) {
   if (!fs.existsSync(dir)) return out;
@@ -73,7 +87,7 @@ function dirSize(dir) {
 
 // Where the program itself lives: the portable exe, or the installed folder. Null when running from source.
 function appSource(app) {
-  if (!app.isPackaged) return null;
+  if (!app.isPackaged || MAC) return null;
   if (process.env.PORTABLE_EXECUTABLE_FILE) return { kind: 'file', path: process.env.PORTABLE_EXECUTABLE_FILE };
   return { kind: 'dir', path: path.dirname(process.execPath) };
 }
@@ -91,17 +105,31 @@ class UsbBackup {
 
   async drives() {
     if (IGNORE_DRIVES) return [];
+    if (MAC) return this.macDrives();
     const out = await ps('Get-CimInstance Win32_LogicalDisk | Select-Object DeviceID,VolumeName,Size,FreeSpace,DriveType,FileSystem | ConvertTo-Json');
     const list = [].concat(JSON.parse(out || '[]'));
     const sys = (process.env.SystemDrive || 'C:').toUpperCase();
     return list.filter((d) => d.DeviceID && d.DeviceID.toUpperCase() !== sys && d.Size).map((d) => {
       const root = d.DeviceID + '\\';
       return {
-        id: d.DeviceID, root, label: d.VolumeName || '', size: Number(d.Size), free: Number(d.FreeSpace), fs: d.FileSystem || '',
+        id: d.DeviceID, name: d.DeviceID, root, label: d.VolumeName || '', size: Number(d.Size), free: Number(d.FreeSpace), fs: d.FileSystem || '',
         type: DRIVE_TYPES[d.DriveType] || 'Other', removable: d.DriveType === 2,
         manifest: this.readManifest(backupRoot(root)),
       };
     });
+  }
+
+  async macDrives() {
+    return Promise.all(mountPoints().map(async (p) => {
+      const st = fs.statfsSync(p);
+      const info = await run('diskutil', ['info', p]).catch(() => '');
+      const field = (k) => ((info.match(new RegExp('^\s*' + k + ':\s*(.+)$', 'm')) || [])[1] || '').trim();
+      const removable = /external/i.test(field('Device Location')) || /removable/i.test(field('Removable Media'));
+      return {
+        id: p, name: '', root: p + path.sep, label: path.basename(p), size: st.blocks * st.bsize, free: st.bavail * st.bsize, fs: field('File System Personality'),
+        type: removable ? 'Removable' : 'Local disk', removable, manifest: this.readManifest(backupRoot(p + path.sep)),
+      };
+    }));
   }
 
   estimate() {
@@ -114,6 +142,7 @@ class UsbBackup {
       tiles: dirSize(path.join(this.dataRoot, 'tiles')),
       app: src ? (src.kind === 'file' ? fs.statSync(src.path).size : dirSize(src.path)) : 0,
       appAvailable: !!src,
+      appNote: MAC ? 'Not available on Mac yet.' : 'Only available in the installed app.',
     };
   }
 
@@ -377,9 +406,8 @@ class UsbBackup {
   async scan() {
     const found = [];
     if (IGNORE_DRIVES) return found;
-    for (let c = 68; c <= 90; c++) {
-      const drive = String.fromCharCode(c) + ':';
-      if (this.dataRoot.toUpperCase().startsWith(drive)) continue;
+    for (const drive of mountPoints()) {
+      if (onDrive(this.dataRoot, drive)) continue;
       const root = backupRoot(drive + path.sep);
       let m;
       try { if (!fs.existsSync(path.join(root, 'backup.json'))) continue; m = this.readManifest(root); } catch (e) { continue; }
@@ -390,8 +418,8 @@ class UsbBackup {
       if (!st || st.sig !== sig) {
         try {
           const p = await this.preview(drive + path.sep);
-          st = { sig, drive, usbChanges: p.usbChanges, conflicts: p.changes.filter((x) => x.kind === 'conflict').length, vault: p.vault.state };
-        } catch (e) { st = { sig, drive, usbChanges: 0, conflicts: 0, vault: 'none' }; }
+          st = { sig, drive, name: driveName(drive), usbChanges: p.usbChanges, conflicts: p.changes.filter((x) => x.kind === 'conflict').length, vault: p.vault.state };
+        } catch (e) { st = { sig, drive, name: driveName(drive), usbChanges: 0, conflicts: 0, vault: 'none' }; }
         this.syncCache.set(drive, st);
       }
       if (st.usbChanges || st.vault === 'locked') found.push(st);
@@ -451,26 +479,27 @@ class UsbBackup {
   present() {
     const out = [];
     if (IGNORE_DRIVES) return out;
-    for (let c = 68; c <= 90; c++) {
-      const drive = String.fromCharCode(c) + ':';
-      if (this.dataRoot.toUpperCase().startsWith(drive)) continue;
+    for (const drive of mountPoints()) {
+      if (onDrive(this.dataRoot, drive)) continue;
       const root = backupRoot(drive + path.sep);
       try { if (!fs.existsSync(path.join(root, 'backup.json'))) continue; } catch (e) { continue; }
       const m = this.readManifest(root);
-      out.push({ drive, created: (m && (m.created || m.started)) || null, complete: !!(m && m.complete) });
+      out.push({ drive, name: driveName(drive), created: (m && (m.created || m.started)) || null, complete: !!(m && m.complete) });
     }
     return out;
   }
 
   // Windows' "Eject" verb returns at once and may silently refuse (files in use), so wait until the drive has actually gone.
+  // macOS's diskutil reports a refusal itself.
   async eject(driveId) {
-    if (!/^[A-Z]:$/i.test(driveId)) throw new Error('Bad drive');
-    await ps(`(New-Object -ComObject Shell.Application).Namespace(17).ParseName('${driveId}').InvokeVerb('Eject')`);
+    if (MAC ? !mountPoints().includes(driveId) : !/^[A-Z]:$/i.test(driveId)) throw new Error('Bad drive');
+    if (MAC) await run('diskutil', ['eject', driveId]).catch(() => {});
+    else await ps(`(New-Object -ComObject Shell.Application).Namespace(17).ParseName('${driveId}').InvokeVerb('Eject')`);
     for (let i = 0; i < 40; i++) {
       if (!fs.existsSync(driveId + path.sep)) return true;
       await new Promise((r) => setTimeout(r, 250));
     }
-    throw new Error(`Windows could not eject ${driveId}. Close any files or windows using it and try again.`);
+    throw new Error(`${MAC ? 'macOS' : 'Windows'} could not eject ${driveName(driveId)}. Close any files or windows using it and try again.`);
   }
 }
 
