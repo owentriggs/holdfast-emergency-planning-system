@@ -15,7 +15,7 @@ fs.mkdirSync(path.join(dataDir, 'data'), { recursive: true });
 fs.writeFileSync(path.join(dataDir, 'data', 'settings.json'), JSON.stringify({ dataVersion: 2 }));
 
 // The release server: /latest lists the assets, /files/<name> serves them. Counts downloads.
-let release = { tag: 'v0.4.0', files: { 'Holdfast-0.4.0-mac-apple-silicon.zip': 'ARM'.repeat(1000), 'Holdfast-0.4.0-mac-intel.zip': 'X64'.repeat(1000), 'Holdfast Emergency Preparation System Setup 0.4.0.exe': 'SETUP' } };
+let release = { tag: 'v0.4.0', files: { 'Holdfast-0.4.0-mac-apple-silicon.dmg': 'ARM'.repeat(1000), 'Holdfast-0.4.0-mac-intel.dmg': 'X64'.repeat(1000), 'Holdfast Emergency Preparation System Setup 0.4.0.exe': 'SETUP' } };
 const downloads = [];
 const server = http.createServer((req, res) => {
   const base = `http://127.0.0.1:${server.address().port}`;
@@ -53,8 +53,8 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
         check('USB page offers the Mac versions', est.others && est.others.wanted.join() === 'Mac (Apple Silicon),Mac (Intel)', JSON.stringify(est.others));
         let r = await run();
         check('Mac versions downloaded', downloads.length === 2 && !downloads.some((d) => /setup/i.test(d)), downloads.join(', '));
-        check('Apple Silicon zip on the drive', fs.readFileSync(onDrive('Holdfast for Apple Silicon Macs.zip'), 'utf8') === 'ARM'.repeat(1000));
-        check('Intel zip on the drive', fs.readFileSync(onDrive('Holdfast for Intel Macs.zip'), 'utf8') === 'X64'.repeat(1000));
+        check('Apple Silicon dmg on the drive', fs.readFileSync(onDrive('Holdfast for Apple Silicon Macs.dmg'), 'utf8') === 'ARM'.repeat(1000));
+        check('Intel dmg on the drive', fs.readFileSync(onDrive('Holdfast for Intel Macs.dmg'), 'utf8') === 'X64'.repeat(1000));
         check('Backup records the release', r.manifest.contents.others.release === 'v0.4.0' && !r.manifest.contents.others.note);
         check('Drive README explains the Mac version', fs.readFileSync(path.join(root, 'README.txt'), 'utf8').includes('Programs\\Mac'));
         check('Kept on this computer', (await js('window.api.usb.estimate()')).others.missing.length === 0);
@@ -65,17 +65,17 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
         server.close();
         await wait(200);
         r = await run();
-        check('Offline: still copied from what is kept here', r.ok && fs.existsSync(onDrive('Holdfast for Intel Macs.zip')) && !r.manifest.contents.others.note, String(r.manifest.contents.others.note));
+        check('Offline: still copied from what is kept here', r.ok && fs.existsSync(onDrive('Holdfast for Intel Macs.dmg')) && !r.manifest.contents.others.note, String(r.manifest.contents.others.note));
 
         fs.rmSync(path.join(dataDir, 'programs'), { recursive: true });
         r = await run();
         check('Offline with nothing kept: backup still finishes, with a note', r.ok && /Could not reach GitHub/.test(r.manifest.contents.others.note || ''), r.manifest.contents.others.note);
 
         await new Promise((res) => server.listen(Number(new URL(process.env.HOLDFAST_RELEASES_URL).port), '127.0.0.1', res));
-        release = { tag: 'v0.4.1', files: { 'Holdfast-0.4.1-mac-apple-silicon.zip': 'NEW'.repeat(1000) } };
+        release = { tag: 'v0.4.1', files: { 'Holdfast-0.4.1-mac-apple-silicon.dmg': 'NEW'.repeat(1000) } };
         downloads.length = 0;
         r = await run();
-        check('Newer release downloaded', downloads.join() === 'Holdfast-0.4.1-mac-apple-silicon.zip' && fs.readFileSync(onDrive('Holdfast for Apple Silicon Macs.zip'), 'utf8') === 'NEW'.repeat(1000));
+        check('Newer release downloaded', downloads.join() === 'Holdfast-0.4.1-mac-apple-silicon.dmg' && fs.readFileSync(onDrive('Holdfast for Apple Silicon Macs.dmg'), 'utf8') === 'NEW'.repeat(1000));
         check('A version missing from the release is noted', /no Mac \(Intel\) version/.test(r.manifest.contents.others.note || ''), r.manifest.contents.others.note);
       } catch (e) {
         results.push('ERROR ' + e.stack);

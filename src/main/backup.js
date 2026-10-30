@@ -9,7 +9,7 @@
 //   Start Holdfast                   optional copy of the program: the portable .exe itself, or a launcher .exe for App/
 //   App/                             the installed program's files, when copied from an installed app
 //   .holdfast-index.json             size, time and sha256 of each file written, so unchanged files are not copied again
-//   Programs/Mac/*.zip               optional: the Mac app, downloaded from the GitHub release (see programs.js)
+//   Programs/Mac/*.dmg               optional: the Mac app, downloaded from the GitHub release (see programs.js)
 //   Holdfast phone.holdfast          optional: the plan and vault in one file for the phone app (see phone.js)
 //   Holdfast changes <time>.holdfast changes saved by the phone app, merged through the sync review
 //
@@ -572,7 +572,7 @@ function readme(c) {
     c.library ? '- Data\\webcache: saved web pages for the offline library.' : null,
     c.tiles ? '- Data\\tiles: offline map tiles.' : null,
     c.app || (c.others && c.others.copied.includes('windows')) ? '- "Start Holdfast": double-click it on any Windows PC to run the program from this drive. It opens this backup directly.' : null,
-    c.others && c.others.copied.some((k) => k.startsWith('mac')) ? '- Programs\\Mac: Holdfast for Mac. Copy the zip for your Mac (Apple menu > About This Mac: "Apple M..." chip or "Intel") to the Mac, open it, and move Holdfast to Applications. The first time, right-click it and choose Open. Then use "Restore from a backup" to bring this backup in.' : null,
+    c.others && c.others.copied.some((k) => k.startsWith('mac')) ? '- Programs\\Mac: Holdfast for Mac. Double-click the one for your Mac (Apple menu > About This Mac: "Apple M..." chip or "Intel") and drag Holdfast onto the Applications shortcut in the window that opens. The first time, right-click Holdfast in Applications and choose Open. Then use "Restore from a backup" to bring this backup in.' : null,
     '',
     'To restore on another computer: install or run Holdfast Emergency Preparation System, open "USB Backup", click "Restore from a backup" and choose this folder.',
     '',

@@ -3,7 +3,7 @@
 // They are downloaded once into <userData>/programs and checked for a newer release at each backup while online.
 //
 //   programs.json   { tag, files: { [kind]: { name, size } } }
-//   <kind> file     mac-apple-silicon.zip, mac-intel.zip, windows.exe
+//   <kind> file     mac-apple-silicon.dmg, mac-intel.dmg, windows.exe
 const fs = require('fs');
 const path = require('path');
 const { Readable } = require('stream');
@@ -15,8 +15,8 @@ const releasesUrl = () => process.env.HOLDFAST_RELEASES_URL || `https://api.gith
 
 // kind: [file kept here, release asset name, where it goes on the drive, label]
 const KINDS = {
-  'mac-apple-silicon': ['mac-apple-silicon.zip', /mac-apple-silicon\.zip$/i, 'Mac/Holdfast for Apple Silicon Macs.zip', 'Mac (Apple Silicon)'],
-  'mac-intel': ['mac-intel.zip', /mac-intel\.zip$/i, 'Mac/Holdfast for Intel Macs.zip', 'Mac (Intel)'],
+  'mac-apple-silicon': ['mac-apple-silicon.dmg', /mac-apple-silicon\.dmg$/i, 'Mac/Holdfast for Apple Silicon Macs.dmg', 'Mac (Apple Silicon)'],
+  'mac-intel': ['mac-intel.dmg', /mac-intel\.dmg$/i, 'Mac/Holdfast for Intel Macs.dmg', 'Mac (Intel)'],
   windows: ['windows.exe', /^Holdfast[ .].*[ .]\d+\.\d+\.\d+\.exe$/i, 'Windows/Holdfast (Windows, portable).exe', 'Windows'],
 };
 // What this computer can't copy from itself.

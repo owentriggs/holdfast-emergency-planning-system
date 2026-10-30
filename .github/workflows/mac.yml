@@ -1,7 +1,9 @@
-# Builds the macOS app on GitHub's Macs (free for public repositories). Run it from the Actions tab
-# ("Mac build" > "Run workflow"), or push a v* tag. Download the zips from the run's "Artifacts".
-# For a v* tag the zips are also added to that GitHub release (a draft is made if there is none yet). The Windows app
-# downloads them from the latest release to put the Mac version on USB backups (src/main/programs.js).
+# Builds the macOS app on GitHub's Macs (free for public repositories), as a .dmg for each kind of Mac: open it and
+# drag Holdfast onto the Applications shortcut beside it. Run it from the Actions tab ("Mac build" > "Run workflow"),
+# or push a v* tag. Download the .dmg files from the run's "Artifacts".
+# For a v* tag (or a release named when running it by hand) the .dmg files are also added to that GitHub release,
+# replacing earlier Mac files; a draft is made if there is no release yet. The Windows app downloads them from the
+# latest release to put the Mac version on USB backups (src/main/programs.js).
 #
 # There is no Apple Developer certificate, so each app gets a free ad-hoc signature instead, which Apple Silicon
 # Macs need before they will open it at all. The first time, macOS still says it is from an unidentified
@@ -10,6 +12,10 @@ name: Mac build
 
 on:
   workflow_dispatch:
+    inputs:
+      release:
+        description: 'Also add the .dmg files to this release (for example v0.4.0). Leave blank to only build.'
+        required: false
   push:
     tags: ['v*']
 
@@ -27,7 +33,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run dist:mac
-      - name: Sign ad hoc and zip
+      - name: Sign ad hoc and make the disk images
         run: |
           version=$(node -p "require('./package.json').version")
           for pair in "dist/mac-arm64:apple-silicon" "dist/mac:intel"; do
@@ -35,17 +41,27 @@ jobs:
             app=$(ls -d "$dir"/*.app)
             codesign --force --deep --sign - "$app"
             codesign --verify --deep "$app"
-            ditto -c -k --keepParent "$app" "dist/Holdfast-$version-mac-$arch.zip"
+            # The disk image shows the app next to a shortcut to Applications, to drag it onto.
+            stage="dist/dmg-$arch"
+            mkdir -p "$stage"
+            ditto "$app" "$stage/$(basename "$app")"
+            ln -s /Applications "$stage/Applications"
+            hdiutil create -volname "Holdfast" -srcfolder "$stage" -fs HFS+ -format UDZO -ov "dist/Holdfast-$version-mac-$arch.dmg"
           done
       - uses: actions/upload-artifact@v4
         with:
           name: holdfast-mac
-          path: dist/*.zip
+          path: dist/*.dmg
           if-no-files-found: error
       - name: Add to the GitHub release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: startsWith(github.ref, 'refs/tags/v') || inputs.release != ''
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.release || github.ref_name }}
         run: |
-          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || gh release create "$GITHUB_REF_NAME" --draft --title "$GITHUB_REF_NAME" --notes "Mac versions added by the Mac build. Add the Windows files and notes, then publish."
-          gh release upload "$GITHUB_REF_NAME" dist/*.zip --clobber
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --draft --title "$TAG" --notes "Mac versions added by the Mac build. Add the Windows files and notes, then publish."
+          # Earlier Mac files on the release (for example the zips 0.4.0 was first built with) are replaced.
+          for old in $(gh release view "$TAG" --json assets --jq '.assets[].name | select(test("mac-(apple-silicon|intel)\\.(zip|dmg)$"))'); do
+            gh release delete-asset "$TAG" "$old" --yes
+          done
+          gh release upload "$TAG" dist/*.dmg --clobber
