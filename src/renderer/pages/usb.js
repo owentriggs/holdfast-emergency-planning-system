@@ -2,7 +2,7 @@ import * as store from '../lib/store.js';
 import { h, panel, status, fmtDate, fmtBytes, confirmBox, daysUntil, icon, bar, promptForm } from '../lib/ui.js';
 import { SECTIONS, buildDocument } from '../lib/printdoc.js';
 
-const opts = { plan: true, protect: false, pdf: true, vault: true, library: false, tiles: false, app: false, phone: false };
+const opts = { plan: true, protect: false, pdf: true, vault: true, library: false, tiles: false, app: false, others: false, phone: false };
 let target = null; // { path, label }
 let restoreFrom = null; // { path, manifest }
 
@@ -64,7 +64,7 @@ export async function render(root, params = {}) {
   }, 5000);
   offs.push(() => clearInterval(timer));
 
-  const selectedSize = () => (opts.plan ? est.plan : 0) + (opts.vault ? est.vault : 0) + (opts.phone ? est.plan + (opts.vault ? est.vault : 0) : 0) + (opts.library ? est.library : 0) + (opts.tiles ? est.tiles : 0) + (opts.app ? est.app : 0) + (opts.pdf ? 300 * 1024 : 0);
+  const selectedSize = () => (opts.plan ? est.plan : 0) + (opts.vault ? est.vault : 0) + (opts.phone ? est.plan + (opts.vault ? est.vault : 0) : 0) + (opts.library ? est.library : 0) + (opts.tiles ? est.tiles : 0) + (opts.app ? est.app : 0) + (opts.others && est.others ? est.others.size : 0) + (opts.pdf ? 300 * 1024 : 0);
 
   function draw() {
     root.replaceChildren(page());
@@ -251,7 +251,7 @@ export async function render(root, params = {}) {
       runBtn.disabled = true;
       cancelBtn.disabled = false;
       const pdfHtml = opts.pdf ? buildDocument(SECTIONS.map((x) => x.id)) : null;
-      const go = (overwrite) => (store.flush(), window.api.usb.run(target.path, { plan: opts.plan, password: opts.plan && opts.protect ? pw.value : null, vault: opts.vault, library: opts.library, tiles: opts.tiles, app: opts.app, phone: opts.phone && opts.plan, pdfHtml, overwrite }));
+      const go = (overwrite) => (store.flush(), window.api.usb.run(target.path, { plan: opts.plan, password: opts.plan && opts.protect ? pw.value : null, vault: opts.vault, library: opts.library, tiles: opts.tiles, app: opts.app, others: opts.others, phone: opts.phone && opts.plan, pdfHtml, overwrite }));
       try {
         let r;
         try { r = await go(false); } catch (e) {
@@ -266,7 +266,8 @@ export async function render(root, params = {}) {
           if (!(await confirmBox('Overwrite the drive and lose the changes made on the other computer?', 'Overwrite', true))) throw new Error('Cancelled');
           r = await go(true);
         }
-        status('Backup finished: ' + r.path, 10000);
+        const others = r.manifest.contents.others;
+        status('Backup finished: ' + r.path + (others && others.note ? '. ' + others.note : ''), others && others.note ? 15000 : 10000);
         await loadDrives();
         await loadReview(target.path);
         est = await window.api.usb.estimate();
@@ -290,6 +291,9 @@ export async function render(root, params = {}) {
         opt('vault', 'Document vault', est.vault, est.vaultExists ? 'Copied still encrypted. Opens with your vault password or recovery code.' : 'No vault set up yet.', !est.vaultExists),
         opt('library', 'Offline library', est.library, 'Saved web pages (GOV.UK, NHS and so on).'),
         opt('tiles', 'Offline map tiles', est.tiles, 'Maps you downloaded for offline use.'),
+        est.others ? opt('others', 'Programs for other computers', est.others.missing.length ? null : est.others.size,
+          `${est.others.wanted.join(', ')}, so the drive can be used on ${est.others.wanted.some((w) => w === 'Windows') ? 'a Windows PC or another Mac' : 'a Mac'}. ` +
+          (est.others.missing.length ? 'Downloaded from GitHub the first time (about 100 MB each), then kept on this computer.' : `Release ${est.others.tag}; a newer one is downloaded when there is one.`)) : null,
         opt('phone', 'Copy for the phone app', null, 'One file the Holdfast phone app opens from this drive: the plan, and the document vault if ticked (still encrypted). Uses the backup password if set.'),
         opt('app', 'Copy of this program', est.appAvailable ? est.app : null, est.appAvailable ? 'Run it from the drive on any Windows PC; it opens the backup directly.' : est.appNote, !est.appAvailable)))),
       h('div', { class: 'row' },

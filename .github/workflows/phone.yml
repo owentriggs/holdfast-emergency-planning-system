@@ -1,5 +1,6 @@
 # Publishes the phone app (scripts/build-web.js) on GitHub Pages, free for public repositories.
-# One-time setup: repository Settings > Pages > Source: "GitHub Actions".
+# One-time setup: repository Settings > Pages > Source: "GitHub Actions". Until then the deploy step fails with
+# "Get Pages site failed" (a workflow's own token is not allowed to switch Pages on).
 # The site only holds the app itself. Plans and vaults stay on each phone and never reach GitHub.
 name: Phone app
 
@@ -25,10 +26,10 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
       - run: npm ci
         env:

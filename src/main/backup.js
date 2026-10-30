@@ -9,6 +9,7 @@
 //   Start Holdfast                   optional copy of the program: the portable .exe itself, or a launcher .exe for App/
 //   App/                             the installed program's files, when copied from an installed app
 //   .holdfast-index.json             size, time and sha256 of each file written, so unchanged files are not copied again
+//   Programs/Mac/*.zip               optional: the Mac app, downloaded from the GitHub release (see programs.js)
 //   Holdfast phone.holdfast          optional: the plan and vault in one file for the phone app (see phone.js)
 //   Holdfast changes <time>.holdfast changes saved by the phone app, merged through the sync review
 //
@@ -104,6 +105,7 @@ class UsbBackup {
     this.store = store;
     this.emit = emit;
     this.cancelled = false;
+    this.programs = null; // Programs (programs.js), set by main.js: copies of the app for other kinds of computer
   }
 
   async drives() {
@@ -145,7 +147,8 @@ class UsbBackup {
       tiles: dirSize(path.join(this.dataRoot, 'tiles')),
       app: src ? (src.kind === 'file' ? fs.statSync(src.path).size : dirSize(src.path)) : 0,
       appAvailable: !!src,
-      appNote: MAC ? 'Not available on Mac yet.' : 'Only available in the installed app.',
+      appNote: MAC ? 'On a Mac, tick "Programs for other computers" instead.' : 'Only available in the installed app.',
+      others: this.programs ? this.programs.status() : null,
     };
   }
 
@@ -210,7 +213,7 @@ class UsbBackup {
     return st;
   }
 
-  // opts: { plan, password, vault, library, tiles, app, phone, pdf: Buffer|null }
+  // opts: { plan, password, vault, library, tiles, app, others, phone, pdf: Buffer|null }
   async run(target, opts) {
     this.cancelled = false;
     let root = backupRoot(target);
@@ -297,6 +300,27 @@ class UsbBackup {
         for (const f of [LEGACY.launcher + '.exe', LEGACY.launcher + '.cmd', LEGACY.portable]) fs.rmSync(path.join(root, f), { force: true });
         contents.app = { version: this.app.getVersion(), kind: src.kind };
       }
+    }
+
+    // Versions for other kinds of computer. A download that fails leaves the rest of the backup as it is.
+    if (opts.others && this.programs) {
+      let r = { tag: null, note: null };
+      try { r = await this.programs.update((p) => this.progress(p)); } catch (e) { r.note = e.message; }
+      const copied = [];
+      index.Programs = index.Programs || {};
+      for (const f of this.programs.files()) {
+        this.progress({ phase: 'Programs for other computers', done: copied.length, total: this.programs.files().length, file: path.basename(f.dest) });
+        if (f.kind === 'windows') {
+          // From a Mac: the portable Windows exe goes where a Windows backup puts it, so it opens this backup directly.
+          index.exe = (await this.copyIfChanged(f.src, path.join(root, LAUNCHER + '.exe'), index.exe, true)).entry;
+          fs.writeFileSync(path.join(root, PORTABLE), JSON.stringify({ dataDir: 'Data' }, null, 1));
+          fs.rmSync(path.join(root, LAUNCHER + '.cmd'), { force: true });
+        } else {
+          index.Programs[f.dest] = (await this.copyIfChanged(f.src, path.join(root, 'Programs', ...f.dest.split('/')), index.Programs[f.dest], true)).entry;
+        }
+        copied.push(f.kind);
+      }
+      contents.others = { release: r.tag, copied, note: r.note };
     }
 
     if (opts.pdf) {
@@ -547,7 +571,8 @@ function readme(c) {
     c.vault ? '- Data\\vault: the document vault. Encrypted; opens with the vault password or recovery code.' : null,
     c.library ? '- Data\\webcache: saved web pages for the offline library.' : null,
     c.tiles ? '- Data\\tiles: offline map tiles.' : null,
-    c.app ? '- "Start Holdfast": double-click it on any Windows PC to run the program from this drive. It opens this backup directly.' : null,
+    c.app || (c.others && c.others.copied.includes('windows')) ? '- "Start Holdfast": double-click it on any Windows PC to run the program from this drive. It opens this backup directly.' : null,
+    c.others && c.others.copied.some((k) => k.startsWith('mac')) ? '- Programs\\Mac: Holdfast for Mac. Copy the zip for your Mac (Apple menu > About This Mac: "Apple M..." chip or "Intel") to the Mac, open it, and move Holdfast to Applications. The first time, right-click it and choose Open. Then use "Restore from a backup" to bring this backup in.' : null,
     '',
     'To restore on another computer: install or run Holdfast Emergency Preparation System, open "USB Backup", click "Restore from a backup" and choose this folder.',
     '',

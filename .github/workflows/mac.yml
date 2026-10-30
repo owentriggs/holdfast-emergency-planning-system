@@ -1,5 +1,7 @@
 # Builds the macOS app on GitHub's Macs (free for public repositories). Run it from the Actions tab
 # ("Mac build" > "Run workflow"), or push a v* tag. Download the zips from the run's "Artifacts".
+# For a v* tag the zips are also added to that GitHub release (a draft is made if there is none yet). The Windows app
+# downloads them from the latest release to put the Mac version on USB backups (src/main/programs.js).
 #
 # There is no Apple Developer certificate, so each app gets a free ad-hoc signature instead, which Apple Silicon
 # Macs need before they will open it at all. The first time, macOS still says it is from an unidentified
@@ -11,14 +13,17 @@ on:
   push:
     tags: ['v*']
 
+permissions:
+  contents: write
+
 jobs:
   mac:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
       - run: npm ci
       - run: npm run dist:mac
@@ -37,3 +42,10 @@ jobs:
           name: holdfast-mac
           path: dist/*.zip
           if-no-files-found: error
+      - name: Add to the GitHub release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || gh release create "$GITHUB_REF_NAME" --draft --title "$GITHUB_REF_NAME" --notes "Mac versions added by the Mac build. Add the Windows files and notes, then publish."
+          gh release upload "$GITHUB_REF_NAME" dist/*.zip --clobber

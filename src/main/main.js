@@ -8,6 +8,7 @@ const { Tiles } = require('./tiles');
 const { WxCache } = require('./wxcache');
 const { Vault } = require('./vault');
 const { UsbBackup, PORTABLE, LEGACY, backupRoot } = require('./backup');
+const { Programs } = require('./programs');
 const printjob = require('./printjob');
 
 // A copy of the program made by "USB Backup" carries holdfast-portable.json (eps-portable.json before the rename)
@@ -144,6 +145,7 @@ app.whenReady().then(() => {
   setInterval(pruneWx, 6 * 3600000);
   vault = new Vault(path.join(dataRoot, 'vault'), emit);
   usb = new UsbBackup(app, dataRoot, store, emit, vault);
+  usb.programs = new Programs(path.join(dataRoot, 'programs'), (url, o) => net.fetch(url, o));
 
   // Watch for backup drives that were edited on another computer (by the program copy on the drive).
   let lastSync = '[]';

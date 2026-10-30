@@ -23,7 +23,7 @@ It is a utility, not a website: dense tables, clear charts, everything saves aut
 
 The files are not code-signed, so Windows SmartScreen may say it "protected your PC". Click **More info**, then **Run anyway**. The release notes list SHA-256 hashes so you can check your download (`Get-FileHash .\<file>.exe` in PowerShell).
 
-**Mac:** the "Mac build" workflow in GitHub Actions builds `Holdfast-<version>-mac-apple-silicon.zip` and `Holdfast-<version>-mac-intel.zip` (under the run's Artifacts). They are not signed with an Apple certificate, so the first time, right-click the app and choose **Open**, or use **System Settings > Privacy & Security > Open Anyway**. Copying the program onto a USB drive is Windows-only for now.
+**Mac:** the "Mac build" workflow in GitHub Actions builds `Holdfast-<version>-mac-apple-silicon.zip` and `Holdfast-<version>-mac-intel.zip` (under the run's Artifacts). They are not signed with an Apple certificate, so the first time, right-click the app and choose **Open**, or use **System Settings > Privacy & Security > Open Anyway**. A USB backup made on a Mac can carry the Windows version, and one made on Windows can carry the Mac version: tick **Programs for other computers**. They are downloaded once from the latest GitHub release and kept on the computer.
 
 **Phone (Android or iPhone):** the phone app runs in the browser and can be added to the home screen, after which it works offline. It is published from this repository on GitHub Pages by the "Phone app" workflow. See [The phone app](#the-phone-app).
 
@@ -132,6 +132,7 @@ Everything lives under `%APPDATA%\Holdfast Emergency Preparation System\`. Earli
 | `webcache\` | Saved web pages (MHTML) and PDFs. |
 | `tiles\` | Offline map tiles. |
 | `sync-bases\` | What was last written to each backup drive, used for two-way sync. The vault part is encrypted. |
+| `programs\` | Versions for other computers (for example the Mac app), downloaded for USB backups. |
 
 **Settings and Data** has "Open data folder" and a plain JSON export and import of the plan.
 
@@ -166,6 +167,7 @@ Each test runs the real app against a throwaway data folder:
 | `npx electron scripts/usb-test.js` | Parent and carer details on wallet cards; USB backup and restore into a temp folder. |
 | `npx electron scripts/rename-test.js` | Moving data from the old "Holdfast Emergency Planning System" folder, and finding and renaming old "EPS Backup" folders on USB drives. |
 | `npx electron scripts/sync-test.js` | Two-way sync: edits on the drive and on the PC, conflicts, and vault documents added elsewhere. |
+| `npx electron scripts/programs-test.js` | "Programs for other computers": downloading from a stand-in release server, copying to the drive, working offline and picking up a newer release. |
 | `npm run web && npx electron scripts/phone-test.js` | The phone app: a password-protected phone copy opened in the real phone app, edits and a vault document added there, and the changes merged back. |
 
 ## Project layout
@@ -177,6 +179,7 @@ src/main/       Electron main process
   vault.js        encrypted document vault
   backup.js       USB backup, restore and two-way sync
   phone.js        files carried to the phone app and back
+  programs.js     Windows and Mac versions from the GitHub release, for USB backups
   merge.js        three-way merge used by sync
   webcache.js     offline web page capture
   tiles.js        map tile cache
