@@ -1,5 +1,6 @@
 import * as store from '../lib/store.js';
-import { h, panel, status, fmtDate, chart, table, chartColors, icon } from '../lib/ui.js';
+import { h, panel, status, fmtDate, chart, table, chartColors, icon, tabs } from '../lib/ui.js';
+import * as wxmap from './wxmap.js';
 
 // WMO weather interpretation codes used by Open-Meteo.
 export const WMO = {
@@ -46,12 +47,26 @@ export async function fetchWarnings(region) {
 export async function fetchFloods(lat, lon) {
   const url = `https://environment.data.gov.uk/flood-monitoring/id/floods?lat=${lat}&long=${lon}&dist=25`;
   const data = await window.api.net.get(url, 'json');
-  const cache = { at: new Date().toISOString(), items: (data.items || []).map((f) => ({ area: f.eaAreaName, desc: f.description, severity: f.severity, level: f.severityLevel, msg: f.message, changed: f.timeMessageChanged })) };
+  const cache = { at: new Date().toISOString(), items: (data.items || []).map((f) => ({ areaId: f.floodAreaID, area: f.eaAreaName, desc: f.description, severity: f.severity, level: f.severityLevel, msg: f.message, changed: f.timeMessageChanged })) };
   store.set('floodCache', cache);
   return cache;
 }
 
-export function render(root) {
+// Saved forecasts, warnings and flood alerts are dropped once older than the weather keep time in Settings,
+// so a stale forecast is never shown as current.
+export function pruneOldCaches() {
+  const keepMs = (Number(store.settings().weatherKeepDays) || 14) * 86400000;
+  for (const key of ['weatherCache', 'warningsCache', 'floodCache']) {
+    const c = store.get(key);
+    if (c && !(Date.now() - new Date(c.at) < keepMs)) store.set(key, null);
+  }
+}
+
+let tab = 'forecast';
+
+export function render(root, params = {}) {
+  if (params.tab) tab = params.tab;
+  pruneOldCaches();
   const st = store.settings();
   const hh = store.get('household');
   const charts = [];
@@ -146,16 +161,31 @@ export function render(root) {
     if (what.includes('warn')) await fetchWarnings(st.metRegion).catch((e) => errs.push('warnings: ' + e.message));
     if (what.includes('flood') && hh.lat) await fetchFloods(hh.lat, hh.lon).catch((e) => errs.push('floods: ' + e.message));
     status(errs.length ? 'Some updates failed: ' + errs.join('; ') : 'Weather updated', 8000);
-    draw();
+    if (tab === 'forecast') draw();
   };
 
-  root.append(h('div', { class: 'row', style: 'margin-bottom:8px' },
+  const bar = h('div', { class: 'row', style: 'margin-bottom:8px' },
     h('button', { class: 'primary', onclick: () => refresh() }, icon('refresh'), 'Refresh all'),
     h('span', { class: 'muted' }, hh.lat ? `Location: ${hh.postcode || ''} (${hh.lat.toFixed(3)}, ${hh.lon.toFixed(3)})` : 'No location set'),
     h('span', { class: 'spacer' }),
-    h('button', { onclick: () => window.api.app.openExternal('https://www.metoffice.gov.uk/weather/warnings-and-advice/uk-warnings') }, 'Met Office website')), body);
-  draw();
+    h('button', { onclick: () => window.api.app.openExternal('https://www.metoffice.gov.uk/weather/warnings-and-advice/uk-warnings') }, 'Met Office website'));
+
+  let mapDone = null;
+  const show = () => {
+    if (mapDone) { mapDone(); mapDone = null; }
+    charts.splice(0).forEach((c) => c.destroy());
+    root.replaceChildren(tabs([{ id: 'forecast', label: 'Forecast' }, { id: 'map', label: 'Map' }], tab, (id) => { tab = id; show(); }));
+    if (tab === 'map') {
+      const box = h('div');
+      root.append(box);
+      mapDone = wxmap.render(box, { hh, st });
+    } else {
+      root.append(bar, body);
+      draw();
+    }
+  };
+  show();
   const wc = store.get('weatherCache');
   if (st.autoCheckWeather && navigator.onLine && !st.offlineMode && (!wc || Date.now() - new Date(wc.at) > 3 * 3600000)) refresh();
-  return () => charts.forEach((c) => c.destroy());
+  return () => { if (mapDone) mapDone(); charts.forEach((c) => c.destroy()); };
 }

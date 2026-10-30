@@ -178,8 +178,10 @@ async function boot() {
   for (const [k, v] of Object.entries(DEFAULTS.settings)) if (!(k in s)) s[k] = v;
   if (needsV2) removeUntouchedStarterRows(SUGGESTIONS);
   // Earlier versions could save 0 here by clearing the box in Settings.
-  for (const k of ['targetDays', 'waterPerPersonDay', 'reviewIntervalMonths', 'keepVersions']) if (!(Number(s[k]) > 0)) s[k] = DEFAULTS.settings[k];
+  for (const k of ['targetDays', 'waterPerPersonDay', 'reviewIntervalMonths', 'keepVersions', 'weatherKeepDays']) if (!(Number(s[k]) > 0)) s[k] = DEFAULTS.settings[k];
   store.save('settings');
+  // Forecasts and warnings saved long ago are no longer true; drop them before the home page shows them.
+  (await import('./pages/weather.js')).pruneOldCaches();
 
   applyTheme();
   buildNav();

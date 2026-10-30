@@ -11,6 +11,7 @@ export async function render(root) {
   const info = await window.api.app.info();
   const wc = await window.api.webcache.stats();
   const tiles = await window.api.tiles.stats();
+  const wx = await window.api.wx.stats();
 
   root.append(h('div', { class: 'grid g2' },
     h('div', { class: 'stack' },
@@ -21,6 +22,7 @@ export async function render(root) {
       panel('Connectivity', h('div', { class: 'form' },
         h('label', null, 'Offline mode'), h('label', { class: 'chk' }, h('input', { type: 'checkbox', checked: s.offlineMode, onchange: (e) => { set('offlineMode', e.target.checked); window.refreshNetState(); } }), 'Never go online (use saved data only)'),
         h('label', null, 'Weather'), h('label', { class: 'chk' }, h('input', { type: 'checkbox', checked: s.autoCheckWeather, onchange: (e) => set('autoCheckWeather', e.target.checked) }), 'Refresh forecast automatically when older than 3 hours'),
+        ...num('weatherKeepDays', 'Keep weather downloads (days)', 'Older forecasts are deleted. Radar is kept 2 days.'),
         ...num('keepVersions', 'Saved versions per web page'))),
       panel('Maps', h('div', { class: 'form' },
         h('label', null, 'Custom tile URL'), h('input', { value: s.customTileUrl, placeholder: 'https://provider/{z}/{x}/{y}.png?key=...', oninput: (e) => set('customTileUrl', e.target.value) }),
@@ -34,6 +36,7 @@ export async function render(root) {
           h('span', null, 'Data folder'), h('span', { class: 'mono small' }, info.dataRoot),
           h('span', null, 'Web library'), h('span', null, `${wc.pages} pages, ${fmtBytes(wc.bytes)}`),
           h('span', null, 'Map tiles'), h('span', null, `${tiles.files.toLocaleString()} tiles, ${fmtBytes(tiles.bytes)}`),
+          h('span', null, 'Weather maps'), h('span', null, `${wx.forecasts} forecasts, ${wx.radarFrames} radar frames, ${fmtBytes(wx.bytes)}`),
           h('span', null, 'Version'), h('span', null, info.version)),
         h('div', { class: 'row' },
           h('button', { class: 'primary', onclick: async () => { store.flush(); const r = await window.api.backup.export(); if (r.ok) status('Backup saved to ' + r.path, 8000); } }, icon('export'), 'Export backup...'),

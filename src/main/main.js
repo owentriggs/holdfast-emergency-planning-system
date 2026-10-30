@@ -5,6 +5,7 @@ const { pathToFileURL } = require('url');
 const { Store } = require('./store');
 const { WebCache } = require('./webcache');
 const { Tiles } = require('./tiles');
+const { WxCache } = require('./wxcache');
 const { Vault } = require('./vault');
 const { UsbBackup, PORTABLE, LEGACY, backupRoot } = require('./backup');
 const printjob = require('./printjob');
@@ -41,6 +42,7 @@ if (app.isPackaged) {
 protocol.registerSchemesAsPrivileged([
   { scheme: 'app', privileges: { standard: true, secure: true, supportFetchAPI: true } },
   { scheme: 'tile', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } },
+  { scheme: 'wx', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } },
   { scheme: 'vault', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true, stream: true } },
 ]);
 
@@ -55,7 +57,7 @@ const LIBS = {
 };
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.svg': 'image/svg+xml', '.json': 'application/json', '.map': 'application/json', '.woff2': 'font/woff2', '.woff': 'font/woff', '.ttf': 'font/ttf', '.eot': 'application/vnd.ms-fontobject' };
 
-let win, store, webcache, tiles, vault, usb;
+let win, store, webcache, tiles, wx, vault, usb;
 const emit = (ch, payload) => win && !win.isDestroyed() && win.webContents.send(ch, payload);
 const settings = () => store.get('settings', {});
 
@@ -134,6 +136,11 @@ app.whenReady().then(() => {
   store = new Store(path.join(dataRoot, 'data'));
   webcache = new WebCache(store, path.join(dataRoot, 'webcache'), emit);
   tiles = new Tiles(path.join(dataRoot, 'tiles'), settings, emit);
+  wx = new WxCache(path.join(dataRoot, 'weather'), settings, emit);
+  // Old weather downloads are removed at start and every few hours.
+  const pruneWx = () => { try { wx.prune(); } catch (e) { console.error('weather prune', e); } };
+  pruneWx();
+  setInterval(pruneWx, 6 * 3600000);
   vault = new Vault(path.join(dataRoot, 'vault'), emit);
   usb = new UsbBackup(app, dataRoot, store, emit, vault);
 
@@ -156,6 +163,7 @@ app.whenReady().then(() => {
 
   protocol.handle('app', serveApp);
   protocol.handle('tile', (req) => tiles.handle(req));
+  protocol.handle('wx', (req) => wx.handle(req));
   protocol.handle('vault', (req) => vault.handle(req));
 
   // Lock the vault when Windows locks or sleeps, or after the computer has been idle for the set time.
@@ -280,6 +288,20 @@ function registerIpc(dataRoot) {
   ipcMain.handle('tiles:cancel', () => tiles.cancel());
   ipcMain.handle('tiles:stats', () => tiles.stats());
   ipcMain.handle('tiles:clear', (_e, src) => tiles.clear(src));
+
+  // Weather map data
+  ipcMain.handle('wx:radarFrames', () => wx.radarFrames());
+  ipcMain.handle('wx:downloadRadar', (_e, b) => wx.downloadRadar(b));
+  ipcMain.handle('wx:cancel', () => wx.cancel());
+  ipcMain.handle('wx:fetchGrid', (_e, b) => wx.fetchGrid(b));
+  ipcMain.handle('wx:grids', () => wx.index());
+  ipcMain.handle('wx:grid', (_e, id) => wx.grid(id));
+  ipcMain.handle('wx:removeGrid', (_e, id) => wx.removeGrid(id));
+  ipcMain.handle('wx:floodAreas', (_e, ids) => wx.floodAreas(ids));
+  ipcMain.handle('wx:storms', () => wx.storms());
+  ipcMain.handle('wx:stats', () => wx.stats());
+  ipcMain.handle('wx:prune', () => wx.prune());
+  ipcMain.handle('wx:clear', () => wx.clear());
 
   // Document vault
   ipcMain.handle('vault:status', () => vault.status());

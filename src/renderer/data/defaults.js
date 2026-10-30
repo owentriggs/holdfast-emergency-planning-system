@@ -53,6 +53,7 @@ export const DEFAULTS = {
     customTileUrl: '',
     customTileAttribution: '',
     autoCheckWeather: true,
+    weatherKeepDays: 14,
     dataVersion: 2,
     vaultAutoLock: 5,
   },
@@ -394,6 +395,7 @@ export const DEFAULTS = {
   reviewLog: [],
   weatherCache: null,
   warningsCache: null,
+  floodCache: null,
 };
 
 // Starter rows are offered as optional suggestions ("Add suggestions" on each table) rather than

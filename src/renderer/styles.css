@@ -219,6 +219,13 @@ webview { flex: 1; border: 1px solid var(--line); background: #fff; }
 #map { flex: 1; border: 1px solid var(--line); min-height: 300px; }
 .leaflet-container { font: inherit; }
 .maplegend { font-size: 11px; }
+.wxscale { display: inline-block; width: 140px; height: 10px; border: 1px solid var(--line); }
+.wxarrow { color: #1b1b1b; text-shadow: 0 0 2px #fff; display: flex; align-items: center; justify-content: center; }
+.wxarrow i { display: block; line-height: 1; }
+.wxcentre { font-weight: 700; font-size: 20px; color: #8a5a00; text-shadow: 0 0 3px #fff; text-align: center; line-height: 1; }
+.wxcentre.low { color: #b3261e; }
+.wxcentre small { display: block; font-size: 10px; font-weight: 600; }
+.wxstorm { color: #b3261e; font-size: 24px; line-height: 1; text-shadow: 0 0 3px #fff; }
 
 /* Misc */
 /* Plain hint line; .warn makes it an amber box for things the user must act on. */
