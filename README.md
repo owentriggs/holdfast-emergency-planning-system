@@ -4,7 +4,7 @@
 
 <h1 align="center">Holdfast</h1>
 
-<p align="center"><b>Emergency planning system for your household</b></p>
+<p align="center"><b>Emergency preparation system for your household</b></p>
 
 Holdfast is a Windows desktop app for planning how your household copes with an emergency: power cuts, floods, storms, fire, evacuation, or being cut off for a few days. It follows UK Government (GOV.UK "Be Ready") and Welsh Government guidance and is built to keep working when the internet does not.
 
@@ -18,8 +18,8 @@ It is a utility, not a website: dense tables, clear charts, everything saves aut
 
 | File | Use it if |
 | --- | --- |
-| `Holdfast.Emergency.Planning.System.Setup.<version>.exe` | You want it installed with a Start menu shortcut. |
-| `Holdfast.Emergency.Planning.System.<version>.exe` | You want the portable version: no install, runs from anywhere, including a USB stick. |
+| `Holdfast.Emergency.Preparation.System.Setup.<version>.exe` | You want it installed with a Start menu shortcut. |
+| `Holdfast.Emergency.Preparation.System.<version>.exe` | You want the portable version: no install, runs from anywhere, including a USB stick. |
 
 The files are not code-signed, so Windows SmartScreen may say it "protected your PC". Click **More info**, then **Run anyway**. The release notes list SHA-256 hashes so you can check your download (`Get-FileHash .\<file>.exe` in PowerShell).
 
@@ -108,7 +108,7 @@ Eject the drive with the **Eject** button before unplugging it.
 
 ## Where data is stored
 
-Everything lives under `%APPDATA%\Holdfast Emergency Planning System\`. Versions before the rename used `%APPDATA%\Emergency Planning System\`; that folder is moved across automatically the first time Holdfast starts.
+Everything lives under `%APPDATA%\Holdfast Emergency Preparation System\`. Earlier versions used `%APPDATA%\Holdfast Emergency Planning System\` or `%APPDATA%\Emergency Planning System\`; the old folder is moved across automatically the first time Holdfast starts.
 
 | Folder | Contents |
 | --- | --- |
@@ -147,7 +147,7 @@ Each test runs the real app against a throwaway data folder:
 | `npx electron scripts/edit-test.js` | Typing into the planner, the delete confirmation, and data migration. |
 | `npx electron scripts/vault-test.js` | Vault encryption on disk, previews, locking, wrong password and the recovery code. |
 | `npx electron scripts/usb-test.js` | Parent and carer details on wallet cards; USB backup and restore into a temp folder. |
-| `npx electron scripts/rename-test.js` | Moving data from the old "Emergency Planning System" folder, and finding and renaming old "EPS Backup" folders on USB drives. |
+| `npx electron scripts/rename-test.js` | Moving data from the old "Holdfast Emergency Planning System" folder, and finding and renaming old "EPS Backup" folders on USB drives. |
 | `npx electron scripts/sync-test.js` | Two-way sync: edits on the drive and on the PC, conflicts, and vault documents added elsewhere. |
 
 ## Project layout

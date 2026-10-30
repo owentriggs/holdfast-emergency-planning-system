@@ -322,5 +322,5 @@ export function buildDocument(sectionIds, opts = {}) {
     : `<div class="mast"><div><div class="k">Household emergency plan</div><div class="t">${esc(hh.name || 'Our household')}</div></div><div class="meta">Printed ${fmtDate(new Date().toISOString(), true)}</div></div>`;
   return `<!doctype html><html><head><meta charset="utf-8"><title>Emergency Plan</title><style>${CSS}</style></head><body>
   ${head}${full || chosen.some((s) => s.sub) ? contents(chosen, opts) : ''}${parts.join('')}
-  <div class="footer">Made with Holdfast Emergency Planning System. Review it every six months and after any big change.</div></body></html>`;
+  <div class="footer">Made with Holdfast Emergency Preparation System. Review it every six months and after any big change.</div></body></html>`;
 }

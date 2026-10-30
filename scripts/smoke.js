@@ -15,7 +15,7 @@ const PAGES = ['dashboard', 'planner', 'contacts', 'supplies', 'checklists', 'va
 const errors = [];
 
 app.on('browser-window-created', (_e, win) => {
-  if (win.getTitle() !== 'Holdfast Emergency Planning System' && BrowserWindow.getAllWindows().length > 1) return;
+  if (win.getTitle() !== 'Holdfast Emergency Preparation System' && BrowserWindow.getAllWindows().length > 1) return;
   win.webContents.on('console-message', (_ev, level, message, line, source) => {
     if (level >= 2) errors.push(`[${level === 3 ? 'error' : 'warn'}] ${message} (${source}:${line})`);
   });

@@ -23,13 +23,14 @@ if (app.isPackaged) {
   } catch (e) { /* normal install */ }
 }
 
-// The app was called "Emergency Planning System" before it became Holdfast. On first run after the rename, move the
-// data folder across. Only for the default location (not portable copies or tests that set their own folder). If the
-// old folder cannot be moved (for example the old version is still open), keep using it where it is.
+// The app was called "Emergency Planning System", then "Holdfast Emergency Planning System", before it became Holdfast
+// Emergency Preparation System. On first run after a rename, move the newest old data folder across. Only for the
+// default location (not portable copies or tests that set their own folder). If the old folder cannot be moved (for
+// example the old version is still open), keep using it where it is.
 {
   const now = app.getPath('userData');
-  const old = path.join(app.getPath('appData'), 'Emergency Planning System');
-  if (now === path.join(app.getPath('appData'), app.getName()) && now !== old && !fs.existsSync(path.join(now, 'data')) && fs.existsSync(path.join(old, 'data'))) {
+  const old = ['Holdfast Emergency Planning System', 'Emergency Planning System'].map((n) => path.join(app.getPath('appData'), n)).find((d) => fs.existsSync(path.join(d, 'data')));
+  if (old && now === path.join(app.getPath('appData'), app.getName()) && now !== old && !fs.existsSync(path.join(now, 'data'))) {
     try {
       if (fs.existsSync(now)) fs.rmdirSync(now); // only succeeds if empty
       fs.renameSync(old, now);
@@ -82,7 +83,7 @@ function createWindow() {
     height: st.winH || 900,
     minWidth: 1000,
     minHeight: 640,
-    title: 'Holdfast Emergency Planning System',
+    title: 'Holdfast Emergency Preparation System',
     icon: path.join(ASSETS, 'icon.ico'),
     backgroundColor: '#f3f3f3',
     webPreferences: {

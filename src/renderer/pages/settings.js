@@ -47,6 +47,6 @@ export async function render(root) {
           h('button', { onclick: () => window.api.app.openDataFolder() }, 'Open data folder')),
         h('div', { class: 'muted small' }, 'Plan data and settings only, not encrypted. For everything, with a password, use USB backup.'))),
       panel('About', h('div', { class: 'small' },
-        h('p', null, 'Holdfast Emergency Planning System is a personal household planning tool. Guidance is summarised from GOV.UK Be Ready, Welsh Government, NHS, St John Ambulance, British Red Cross and Resuscitation Council UK.'),
+        h('p', null, 'Holdfast Emergency Preparation System is a personal household emergency preparation tool. Guidance is summarised from GOV.UK Be Ready, Welsh Government, NHS, St John Ambulance, British Red Cross and Resuscitation Council UK.'),
         h('p', null, 'It does not replace official warnings or professional advice. In an emergency call 999.'))))));
 }

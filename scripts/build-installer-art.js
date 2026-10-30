@@ -18,7 +18,7 @@ const ART = [
     body: `<script>${HEX}; document.write(hexField(164, 240, 15, { unit: 'px', seed: 23, density: 0.34 }))</script>
       <div style="position:absolute;left:16px;bottom:18px;font:600 16px Tektur;letter-spacing:1.5px;color:#1b1b1b;display:flex;align-items:center;gap:9px">
         ${LOGO.replace('<svg ', '<svg width="30" height="30" ')}HOLDFAST</div>
-      <div style="position:absolute;left:16px;bottom:6px;font:9px 'Segoe UI';color:#5f6368">Emergency planning system</div>`,
+      <div style="position:absolute;left:16px;bottom:6px;font:9px 'Segoe UI';color:#5f6368">Emergency preparation system</div>`,
   },
   {
     file: 'installerHeader.bmp', w: 150, h: 57,

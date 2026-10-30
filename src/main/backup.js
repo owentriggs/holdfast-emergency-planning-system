@@ -476,7 +476,7 @@ class UsbBackup {
 
 function readme(c) {
   const lines = [
-    'HOLDFAST EMERGENCY PLANNING SYSTEM BACKUP',
+    'HOLDFAST EMERGENCY PREPARATION SYSTEM BACKUP',
     `Made ${new Date().toLocaleString('en-GB')}`,
     '',
     'What is here:',
@@ -487,7 +487,7 @@ function readme(c) {
     c.tiles ? '- Data\\tiles: offline map tiles.' : null,
     c.app ? '- "Start Holdfast": double-click it on any Windows PC to run the program from this drive. It opens this backup directly.' : null,
     '',
-    'To restore on another computer: install or run Holdfast Emergency Planning System, open "USB Backup", click "Restore from a backup" and choose this folder.',
+    'To restore on another computer: install or run Holdfast Emergency Preparation System, open "USB Backup", click "Restore from a backup" and choose this folder.',
     '',
     'Keep this drive somewhere safe, for example in your grab bag. Anyone who has it can read any part that is not password protected.',
   ];

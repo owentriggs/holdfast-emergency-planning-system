@@ -1,8 +1,8 @@
 {
-  "name": "holdfast-emergency-planning-system",
-  "productName": "Holdfast Emergency Planning System",
+  "name": "holdfast-emergency-preparation-system",
+  "productName": "Holdfast Emergency Preparation System",
   "version": "0.3.0",
-  "description": "Holdfast: offline-first household emergency planner for Windows (UK/Wales).",
+  "description": "Holdfast: offline-first household emergency preparation for Windows (UK/Wales).",
   "main": "src/main/main.js",
   "private": true,
   "scripts": {
@@ -16,7 +16,7 @@
   "build": {
     "appId": "uk.local.emergencyplanner",
     "publish": null,
-    "productName": "Holdfast Emergency Planning System",
+    "productName": "Holdfast Emergency Preparation System",
     "files": [
       "src/**/*",
       "node_modules/**/*",
@@ -40,7 +40,7 @@
       "allowToChangeInstallationDirectory": true,
       "installerIcon": "build/icon.ico",
       "uninstallerIcon": "build/icon.ico",
-      "shortcutName": "Holdfast Emergency Planning System",
+      "shortcutName": "Holdfast Emergency Preparation System",
       "installerSidebar": "build/installerSidebar.bmp",
       "uninstallerSidebar": "build/installerSidebar.bmp",
       "installerHeader": "build/installerHeader.bmp"
