@@ -1,7 +1,9 @@
 import * as store from './lib/store.js';
 import { h, status, icon, fmtDate, messageBox } from './lib/ui.js';
 
-const PAGES = [
+// desktop: needs the computer (downloads, printing, USB). web: only in the phone app (web/api.js).
+const WEB = window.api.platform === 'web';
+const ALL_PAGES = [
   { group: 'Overview' },
   { id: 'dashboard', icon: 'home-outline', label: 'Home', mod: './pages/dashboard.js' },
   { group: 'Plan' },
@@ -12,17 +14,19 @@ const PAGES = [
   { id: 'vault', icon: 'safe-square-outline', label: 'Document vault', mod: './pages/vault.js' },
   { group: 'Reference' },
   { id: 'firstaid', icon: 'medical-bag', label: 'First aid', mod: './pages/firstaid.js' },
-  { id: 'library', icon: 'bookshelf', label: 'Library', mod: './pages/library.js' },
+  { id: 'library', icon: 'bookshelf', label: 'Library', mod: './pages/library.js', desktop: true },
   { id: 'radio', icon: 'radio-handheld', label: 'Radio', mod: './pages/radio.js' },
   { group: 'Situation' },
-  { id: 'maps', icon: 'map-outline', label: 'Maps', mod: './pages/maps.js', fill: true },
-  { id: 'weather', icon: 'weather-partly-rainy', label: 'Weather', mod: './pages/weather.js' },
+  { id: 'maps', icon: 'map-outline', label: 'Maps', mod: './pages/maps.js', fill: true, desktop: true },
+  { id: 'weather', icon: 'weather-partly-rainy', label: 'Weather', mod: './pages/weather.js', desktop: true },
   { id: 'tools', icon: 'calculator-variant-outline', label: 'Calculators', mod: './pages/tools.js' },
   { group: 'System' },
-  { id: 'print', icon: 'printer-outline', label: 'Print', mod: './pages/print.js', fill: true },
-  { id: 'usb', icon: 'usb-flash-drive-outline', label: 'USB backup', mod: './pages/usb.js' },
+  { id: 'print', icon: 'printer-outline', label: 'Print', mod: './pages/print.js', fill: true, desktop: true },
+  { id: 'usb', icon: 'usb-flash-drive-outline', label: 'USB backup', mod: './pages/usb.js', desktop: true },
+  { id: 'phone', icon: 'cellphone-arrow-down', label: 'Phone copy', mod: './pages/phone.js', web: true },
   { id: 'settings', icon: 'cog-outline', label: 'Settings', mod: './pages/settings.js' },
 ];
+const PAGES = ALL_PAGES.filter((p) => !(WEB ? p.desktop : p.web));
 
 let current = null;
 let cleanup = null;
@@ -49,6 +53,7 @@ export async function go(id, params) {
   }
   current = p.id;
   location.hash = p.id;
+  document.body.classList.remove('navopen');
   document.querySelectorAll('.navitem').forEach((el) => el.classList.toggle('active', el.dataset.id === p.id));
   document.getElementById('pagetitle').textContent = p.label;
   const page = document.getElementById('page');
@@ -106,7 +111,7 @@ function syncNote(list) {
   const el = document.getElementById('syncnote');
   const d = list && list[0];
   el.replaceChildren(d ? h('button', { class: 'syncnote', title: 'The copy of the program on this drive was used on another computer', onclick: () => go('usb', { review: d.drive }) },
-    icon('usb-flash-drive-outline'), `${d.name || d.drive} has ${d.usbChanges ? d.usbChanges + ' change(s)' : 'changes'} from another computer. Review`) : '');
+    icon(d.usbChanges || !d.fromPhone ? 'usb-flash-drive-outline' : 'cellphone'), `${d.name || d.drive} has ${d.usbChanges ? d.usbChanges + ' change(s)' : 'changes'} from ${d.usbChanges || !d.fromPhone ? 'another computer' : 'the phone app'}. Review`) : '');
 }
 
 // Holdfast backup drives that are plugged in, shown at the bottom of the sidebar with an eject button.
@@ -120,7 +125,7 @@ function usbDrives(list) {
     return h('div', { class: 'usbitem' + (changes ? ' changed' : ''), title: 'Open USB backup for this drive', onclick: () => go('usb', { drive: d.drive }) },
       icon('usb-flash-drive'),
       h('div', { class: 't' }, h('b', null, `Holdfast drive (${d.name || d.drive})`),
-        h('small', null, busy ? 'Ejecting...' : changes ? 'Has changes from another PC' : d.complete ? 'Backup ' + fmtDate(d.created) : 'Unfinished backup')),
+        h('small', null, busy ? 'Ejecting...' : changes ? (changes.usbChanges || !changes.fromPhone ? 'Has changes from another PC' : 'Has changes from the phone') : d.complete ? 'Backup ' + fmtDate(d.created) : 'Unfinished backup')),
       h('button', { class: 'eject', title: 'Eject so it is safe to remove', disabled: busy, onclick: (e) => { e.stopPropagation(); ejectDrive(d.drive); } }, icon('eject')));
   }));
 }
@@ -186,6 +191,18 @@ async function boot() {
 
   applyTheme();
   buildNav();
+  // On a phone the sidebar slides in from a menu button.
+  if (WEB) {
+    document.body.classList.add('web');
+    document.getElementById('topbar').prepend(h('button', { class: 'menubtn', title: 'Menu', onclick: () => document.body.classList.toggle('navopen') }, icon('menu')));
+    // A tap outside the open menu closes it (and does nothing else).
+    document.addEventListener('click', (e) => {
+      if (!document.body.classList.contains('navopen') || e.target.closest('#nav, .menubtn')) return;
+      e.preventDefault();
+      e.stopPropagation();
+      document.body.classList.remove('navopen');
+    }, true);
+  }
   footer();
   netState();
   window.addEventListener('online', netState);
@@ -205,6 +222,8 @@ async function boot() {
       }
     }
   });
+  // The phone app starts on Phone copy until a plan has been brought over from the computer.
+  if (WEB && !(await window.api.phone.status())) return go('phone');
   go((location.hash || '').slice(1) || 'dashboard');
 }
 

@@ -25,7 +25,7 @@ contextBridge.exposeInMainWorld('api', {
   },
   wx: Object.fromEntries(['radarFrames', 'downloadRadar', 'cancel', 'fetchGrid', 'grids', 'grid', 'removeGrid', 'floodAreas', 'storms', 'stats', 'prune', 'clear'].map((m) => [m, inv('wx:' + m)])),
   vault: Object.fromEntries(['status', 'create', 'unlock', 'lock', 'changePassword', 'list', 'saveEntry', 'removeEntry', 'addFiles', 'pickFiles', 'removeFile', 'saveCopy', 'openExternal', 'stats', 'backup', 'restore', 'destroy'].map((m) => [m, inv('vault:' + m)])),
-  usb: Object.fromEntries(['drives', 'estimate', 'chooseFolder', 'run', 'restore', 'cancel', 'eject', 'openFolder', 'preview', 'apply', 'syncStatus', 'present'].map((m) => [m, inv('usb:' + m)])),
+  usb: Object.fromEntries(['drives', 'estimate', 'chooseFolder', 'run', 'restore', 'cancel', 'eject', 'openFolder', 'preview', 'apply', 'syncStatus', 'present', 'phoneChanges', 'openPhoneChanges'].map((m) => [m, inv('usb:' + m)])),
   print: Object.fromEntries(['printers', 'build', 'run', 'save', 'open'].map((m) => [m, inv('print:' + m)])),
   backup: { export: inv('backup:export'), import: inv('backup:import') },
   app: { openDataFolder: inv('app:openDataFolder'), openExternal: inv('app:openExternal'), info: inv('app:info') },

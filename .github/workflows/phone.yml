@@ -1,0 +1,42 @@
+# Publishes the phone app (scripts/build-web.js) on GitHub Pages, free for public repositories.
+# One-time setup: repository Settings > Pages > Source: "GitHub Actions".
+# The site only holds the app itself. Plans and vaults stay on each phone and never reach GitHub.
+name: Phone app
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['src/renderer/**', 'src/assets/**', 'web/**', 'scripts/build-web.js', 'package-lock.json']
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+      - run: node scripts/build-web.js
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web-dist
+      - id: deployment
+        uses: actions/deploy-pages@v4

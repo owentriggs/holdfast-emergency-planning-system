@@ -38,14 +38,14 @@ export async function render(root) {
           h('span', null, 'Map tiles'), h('span', null, `${tiles.files.toLocaleString()} tiles, ${fmtBytes(tiles.bytes)}`),
           h('span', null, 'Weather maps'), h('span', null, `${wx.forecasts} forecasts, ${wx.radarFrames} radar frames, ${fmtBytes(wx.bytes)}`),
           h('span', null, 'Version'), h('span', null, info.version)),
-        h('div', { class: 'row' },
+        window.api.platform === 'web' ? null : h('div', { class: 'row' },
           h('button', { class: 'primary', onclick: async () => { store.flush(); const r = await window.api.backup.export(); if (r.ok) status('Backup saved to ' + r.path, 8000); } }, icon('export'), 'Export backup...'),
           h('button', { onclick: async () => {
             if (!(await confirmBox('Importing replaces your current plan data with the backup. Continue?', 'Import'))) return;
             try { const r = await window.api.backup.import(); if (r.ok) { status('Backup imported'); store.reloadFromDisk(); } } catch (e) { status('Import failed: ' + e.message, 8000); }
           } }, 'Import backup...'),
           h('button', { onclick: () => window.api.app.openDataFolder() }, 'Open data folder')),
-        h('div', { class: 'muted small' }, 'Plan data and settings only, not encrypted. For everything, with a password, use USB backup.'))),
+        h('div', { class: 'muted small' }, window.api.platform === 'web' ? 'To bring a newer plan over or send edits back, use Phone copy.' : 'Plan data and settings only, not encrypted. For everything, with a password, use USB backup.'))),
       panel('About', h('div', { class: 'small' },
         h('p', null, 'Holdfast Emergency Preparation System is a personal household emergency preparation tool. Guidance is summarised from GOV.UK Be Ready, Welsh Government, NHS, St John Ambulance, British Red Cross and Resuscitation Council UK.'),
         h('p', null, 'It does not replace official warnings or professional advice. In an emergency call 999.'))))));

@@ -23,6 +23,10 @@ It is a utility, not a website: dense tables, clear charts, everything saves aut
 
 The files are not code-signed, so Windows SmartScreen may say it "protected your PC". Click **More info**, then **Run anyway**. The release notes list SHA-256 hashes so you can check your download (`Get-FileHash .\<file>.exe` in PowerShell).
 
+**Mac:** the "Mac build" workflow in GitHub Actions builds `Holdfast-<version>-mac-apple-silicon.zip` and `Holdfast-<version>-mac-intel.zip` (under the run's Artifacts). They are not signed with an Apple certificate, so the first time, right-click the app and choose **Open**, or use **System Settings > Privacy & Security > Open Anyway**. Copying the program onto a USB drive is Windows-only for now.
+
+**Phone (Android or iPhone):** the phone app runs in the browser and can be added to the home screen, after which it works offline. It is published from this repository on GitHub Pages by the "Phone app" workflow. See [The phone app](#the-phone-app).
+
 ## What it does
 
 | Area | What you get |
@@ -106,6 +110,17 @@ Holdfast Backup\
 
 Eject the drive with the **Eject** button before unplugging it.
 
+## The phone app
+
+The phone app is the same pages in a phone browser, without the parts that need the computer (maps and weather downloads, the web library, printing and USB backup). Plans and vaults are stored only in the browser on the phone, never online.
+
+1. On the computer, back up with **Copy for the phone app** ticked. This writes `Holdfast phone.holdfast` into the backup folder: the plan (protected with the backup password if one is set) and, if ticked, the document vault, still encrypted.
+2. Plug the drive into the phone (USB-C, or with an adapter). In the phone app, **Phone copy > Open phone file** and choose that file.
+3. Edits made on the phone are saved with **Save changes for the computer**, which makes a `Holdfast changes <time>.holdfast` file. Save it into the drive's `Holdfast Backup` folder (or send it to the computer and use **Open a changes file...**).
+4. On the computer, **USB backup** lists the changes file and opens the same review as two-way sync. Applying it renames the file to "(merged)". Make a new phone copy afterwards so the phone has the merged plan.
+
+The vault is set up and its password changed on the computer; on the phone it can be opened, browsed and added to.
+
 ## Where data is stored
 
 Everything lives under `%APPDATA%\Holdfast Emergency Preparation System\`. Earlier versions used `%APPDATA%\Holdfast Emergency Planning System\` or `%APPDATA%\Emergency Planning System\`; the old folder is moved across automatically the first time Holdfast starts.
@@ -137,6 +152,8 @@ npm run dist
 
 The app icon is generated from `src/assets/logo.svg` with `npm run icons`.
 
+The Mac app is built on GitHub's Macs (`.github/workflows/mac.yml`, or `npm run dist:mac` on a Mac). The phone app is built into `web-dist\` with `npm run web`; serve that folder with any static web server to try it.
+
 ## Tests
 
 Each test runs the real app against a throwaway data folder:
@@ -149,6 +166,7 @@ Each test runs the real app against a throwaway data folder:
 | `npx electron scripts/usb-test.js` | Parent and carer details on wallet cards; USB backup and restore into a temp folder. |
 | `npx electron scripts/rename-test.js` | Moving data from the old "Holdfast Emergency Planning System" folder, and finding and renaming old "EPS Backup" folders on USB drives. |
 | `npx electron scripts/sync-test.js` | Two-way sync: edits on the drive and on the PC, conflicts, and vault documents added elsewhere. |
+| `npm run web && npx electron scripts/phone-test.js` | The phone app: a password-protected phone copy opened in the real phone app, edits and a vault document added there, and the changes merged back. |
 
 ## Project layout
 
@@ -158,6 +176,7 @@ src/main/       Electron main process
   store.js        JSON file store
   vault.js        encrypted document vault
   backup.js       USB backup, restore and two-way sync
+  phone.js        files carried to the phone app and back
   merge.js        three-way merge used by sync
   webcache.js     offline web page capture
   tiles.js        map tile cache
@@ -165,7 +184,8 @@ src/renderer/   UI (plain ES modules, no framework or bundler)
   pages/          one module per page
   lib/            DOM helpers, editable table, store, print document builder
   data/           defaults, first aid guides, radio frequencies
-scripts/        icon builder and tests
+web/            the phone app's stand-in for the main process: IndexedDB storage, vault encryption, phone files
+scripts/        icon builder, phone app build and tests
 ```
 
 Built with Electron, Leaflet, Chart.js and Material Design Icons.

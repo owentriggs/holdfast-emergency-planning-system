@@ -89,7 +89,7 @@ export async function render(root) {
     h('div', { class: 'grid g21' },
       h('div', { class: 'stack' },
         panel('Needs attention', attention.length ? h('div', { class: 'list', style: 'max-height:240px' }, attention) : h('div', { class: 'muted' }, 'Nothing needs attention.'),
-          warn ? null : summary(['Weather warnings not checked yet', 'warn'])),
+          warn || window.api.platform === 'web' ? null : summary(['Weather warnings not checked yet', 'warn'])),
         panel('Readiness', readinessTable, summary(`${done} of ${items.length} done`))),
       h('div', { class: 'stack' },
         panel('Forecast', wxBody, wc ? summary(fmtDate(wc.at, true)) : null),

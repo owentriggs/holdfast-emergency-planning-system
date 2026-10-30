@@ -12,7 +12,8 @@
     "icons": "electron scripts/build-icons.js",
     "smoke": "electron scripts/smoke.js",
     "installer-art": "electron scripts/build-installer-art.js",
-    "dist:mac": "electron-builder --mac dir --arm64 --x64 --publish never"
+    "dist:mac": "electron-builder --mac dir --arm64 --x64 --publish never",
+    "web": "node scripts/build-web.js"
   },
   "build": {
     "appId": "uk.local.emergencyplanner",
@@ -71,6 +72,7 @@
   },
   "devDependencies": {
     "electron": "^33.2.1",
-    "electron-builder": "^25.1.8"
+    "electron-builder": "^25.1.8",
+    "scrypt-js": "^3.0.1"
   }
 }

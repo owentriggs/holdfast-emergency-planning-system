@@ -398,6 +398,16 @@ function registerIpc(dataRoot) {
     return { ...p, vault: { state: v.state, changed: v.changed } };
   });
   ipcMain.handle('usb:apply', writing((_e, target, choices) => usb.apply(target, choices)));
+  ipcMain.handle('usb:phoneChanges', (_e, target) => usb.phoneChanges(target));
+  // file: a changes file found on a drive, or null to choose one (for example one the phone sent some other way).
+  ipcMain.handle('usb:openPhoneChanges', async (_e, file, password) => {
+    if (!file) {
+      const r = await dialog.showOpenDialog(win, { title: 'Open changes from the phone app', filters: [{ name: 'Holdfast phone changes', extensions: ['holdfast'] }] });
+      if (r.canceled) return null;
+      file = r.filePaths[0];
+    }
+    return { file, root: await usb.openPhoneChanges(file, password) };
+  });
   ipcMain.handle('usb:syncStatus', () => usb.scan());
   ipcMain.handle('usb:present', () => usb.present());
   ipcMain.handle('usb:cancel', () => usb.cancel());

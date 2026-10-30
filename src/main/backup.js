@@ -9,6 +9,8 @@
 //   Start Holdfast                   optional copy of the program: the portable .exe itself, or a launcher .exe for App/
 //   App/                             the installed program's files, when copied from an installed app
 //   .holdfast-index.json             size, time and sha256 of each file written, so unchanged files are not copied again
+//   Holdfast phone.holdfast          optional: the plan and vault in one file for the phone app (see phone.js)
+//   Holdfast changes <time>.holdfast changes saved by the phone app, merged through the sync review
 //
 // Folders are synced: unchanged files are skipped (same size and modified time, or the same content as the index
 // records when only the time changed), files no longer present are removed, so repeat backups are quick.
@@ -19,6 +21,7 @@ const fs = process.versions.electron ? require('original-fs') : require('fs');
 const path = require('path');
 const { seal, open, scrypt, KDF, MAXMEM } = require('./vault');
 const { mergePlan, SKIP_KEYS } = require('./merge');
+const phone = require('./phone');
 
 const FOLDER = 'Holdfast Backup';
 const LAUNCHER = 'Start Holdfast';
@@ -207,7 +210,7 @@ class UsbBackup {
     return st;
   }
 
-  // opts: { plan, password, vault, library, tiles, app, pdf: Buffer|null }
+  // opts: { plan, password, vault, library, tiles, app, phone, pdf: Buffer|null }
   async run(target, opts) {
     this.cancelled = false;
     let root = backupRoot(target);
@@ -257,6 +260,13 @@ class UsbBackup {
     }
     // Sections not chosen this time keep whatever an earlier backup left; the manifest says so.
     for (const k of ['plan', 'vault', 'library', 'tiles']) if (!contents[k] && old && old.contents && old.contents[k]) contents[k] = { ...old.contents[k], fromEarlier: old.created };
+
+    if (opts.phone) {
+      this.progress({ phase: 'Phone copy', done: 0, total: 1 });
+      const pc = await phone.writePhoneCopy(root, { plan: this.store.all(), password: opts.password, vaultDir: opts.vault ? path.join(this.dataRoot, 'vault') : null, appVersion: this.app.getVersion() });
+      this.saveBase('phone-' + pc.id, { plan: true, vault: pc.vault });
+      contents.phone = pc;
+    }
 
     if (opts.app) {
       const src = appSource(this.app);
@@ -385,12 +395,20 @@ class UsbBackup {
   }
 
   // Applies the chosen changes to this computer, then writes the merged result back to the drive so both match.
+  // Changes from the phone are only brought in: nothing is written back, and the base stays as it was when the phone
+  // file was made, so a later changes file from the same phone copy is still compared correctly.
   async apply(target, choices) {
     const p = await this.preview(target, choices);
     const root = p.root;
     if (p.vault.state === 'locked') throw new Error('Unlock the document vault first so its changes can be compared');
     if (p.plan) for (const k of p.plan.changed) { this.store.set(k, p.plan.result[k]); this.emit('store:changed', { key: k, value: p.plan.result[k] }); }
     if (p.vault.state === 'compared' && p.vault.changed) this.vault.applyMerged(p.vault.result, path.join(root, 'Data', 'vault', 'files'));
+    if (p.manifest && p.manifest.phone) {
+      phone.markMerged(p.manifest.phone.file);
+      fs.rmSync(path.dirname(root), { recursive: true, force: true });
+      this.syncCache.clear();
+      return { ok: true, applied: p.changes.filter((c) => c.choice === 'usb').length, keys: p.plan ? p.plan.changed : [] };
+    }
     if (fs.existsSync(path.join(root, 'Data', 'data'))) await this.sync(path.join(this.dataRoot, 'data'), path.join(root, 'Data', 'data'), 'Plan data');
     const vaultOnDrive = p.vault.state === 'compared' || p.vault.state === 'same';
     if (vaultOnDrive) await this.sync(path.join(this.dataRoot, 'vault'), path.join(root, 'Data', 'vault'), 'Document vault');
@@ -411,6 +429,8 @@ class UsbBackup {
       const root = backupRoot(drive + path.sep);
       let m;
       try { if (!fs.existsSync(path.join(root, 'backup.json'))) continue; m = this.readManifest(root); } catch (e) { continue; }
+      const fromPhone = phone.listChanges(root).length;
+      if (fromPhone) found.push({ drive, name: driveName(drive), usbChanges: 0, conflicts: 0, vault: 'none', fromPhone });
       if (!m || !m.complete || !this.editedSince(root, m)) continue;
       const mt = (d) => { try { return fs.statSync(path.join(root, 'Data', d)).mtimeMs; } catch (e) { return 0; } };
       const sig = [m.created, this.vault && this.vault.isUnlocked(), mt('data'), mt('vault')].join();
@@ -422,7 +442,10 @@ class UsbBackup {
         } catch (e) { st = { sig, drive, name: driveName(drive), usbChanges: 0, conflicts: 0, vault: 'none' }; }
         this.syncCache.set(drive, st);
       }
-      if (st.usbChanges || st.vault === 'locked') found.push(st);
+      if (st.usbChanges || st.vault === 'locked') {
+        const had = found.find((x) => x.drive === drive);
+        if (had) Object.assign(had, st, { fromPhone: had.fromPhone }); else found.push(st);
+      }
     }
     return found.map(({ sig, ...x }) => x);
   }
@@ -473,6 +496,16 @@ class UsbBackup {
     }
     this.progress({ phase: 'Finished', done: 1, total: 1 });
     return { ok: true, restored: done, savedTo: fs.existsSync(saved) ? saved : null };
+  }
+
+  // Changes files from the phone in a backup folder (target: drive root or the folder itself).
+  phoneChanges(target) { return phone.listChanges(backupRoot(target)); }
+
+  // Unpacks a changes file so it can be reviewed like a drive. Returns the folder to pass to preview() and apply().
+  async openPhoneChanges(file, password) {
+    const tmp = path.join(this.dataRoot, 'phone-import');
+    fs.rmSync(tmp, { recursive: true, force: true });
+    return phone.unpackChanges(file, password, tmp);
   }
 
   // Drives plugged in now that hold a Holdfast backup. Cheap enough to run every couple of seconds.

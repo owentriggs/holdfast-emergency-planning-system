@@ -1,8 +1,8 @@
 import * as store from '../lib/store.js';
-import { h, panel, status, fmtDate, fmtBytes, confirmBox, daysUntil, icon, bar } from '../lib/ui.js';
+import { h, panel, status, fmtDate, fmtBytes, confirmBox, daysUntil, icon, bar, promptForm } from '../lib/ui.js';
 import { SECTIONS, buildDocument } from '../lib/printdoc.js';
 
-const opts = { plan: true, protect: false, pdf: true, vault: true, library: false, tiles: false, app: false };
+const opts = { plan: true, protect: false, pdf: true, vault: true, library: false, tiles: false, app: false, phone: false };
 let target = null; // { path, label }
 let restoreFrom = null; // { path, manifest }
 
@@ -33,7 +33,8 @@ export async function render(root, params = {}) {
   let est = await window.api.usb.estimate();
   let drives = [];
   let busy = false;
-  let review = null; // { target, p, choices }
+  let review = null; // { target, p, choices, phone }: phone when reviewing a changes file from the phone app
+  let fromPhone = []; // changes files from the phone app in the selected drive's backup folder
   let since = null; // { list, created, hasBase }: what this PC changed since its last backup to the selected drive
   if (!est.vaultExists) opts.vault = false;
   if (!est.appAvailable) opts.app = false;
@@ -63,20 +64,52 @@ export async function render(root, params = {}) {
   }, 5000);
   offs.push(() => clearInterval(timer));
 
-  const selectedSize = () => (opts.plan ? est.plan : 0) + (opts.vault ? est.vault : 0) + (opts.library ? est.library : 0) + (opts.tiles ? est.tiles : 0) + (opts.app ? est.app : 0) + (opts.pdf ? 300 * 1024 : 0);
+  const selectedSize = () => (opts.plan ? est.plan : 0) + (opts.vault ? est.vault : 0) + (opts.phone ? est.plan + (opts.vault ? est.vault : 0) : 0) + (opts.library ? est.library : 0) + (opts.tiles ? est.tiles : 0) + (opts.app ? est.app : 0) + (opts.pdf ? 300 * 1024 : 0);
 
   function draw() {
     root.replaceChildren(page());
   }
 
   // Compares the selected drive with this computer. Shows the review panel if the drive was changed elsewhere.
-  async function loadReview(path, choices = {}) {
+  async function loadReview(path, choices = {}, phone = false) {
+    if (!phone) fromPhone = await window.api.usb.phoneChanges(path).catch(() => []);
     try {
       store.flush();
       const p = await window.api.usb.preview(path, choices);
-      review = p.usbChanges || p.vault.state === 'locked' || p.vault.state === 'different' ? { target: path, p, choices } : null;
-      since = p.manifest ? { list: p.since || [], created: p.manifest.created, hasBase: !!p.since } : null;
-    } catch (e) { review = null; since = null; }
+      review = p.usbChanges || p.vault.state === 'locked' || p.vault.state === 'different' ? { target: path, p, choices, phone } : null;
+      if (!phone) since = p.manifest ? { list: p.since || [], created: p.manifest.created, hasBase: !!p.since } : null;
+    } catch (e) { review = null; if (!phone) since = null; }
+  }
+
+  // Unpacks a changes file from the phone (file: one found on the drive, or null to choose one) and reviews it.
+  async function reviewPhone(file) {
+    let password = null;
+    for (;;) {
+      try {
+        const r = await window.api.usb.openPhoneChanges(file, password);
+        if (!r) return;
+        await loadReview(r.root, {}, true);
+        if (!review) status('Nothing in that file differs from this PC.', 8000);
+        return draw();
+      } catch (e) {
+        const msg = errMsg(e);
+        if (!/^PASSWORD_(NEEDED|WRONG)/.test(msg)) return status('Could not open the changes file: ' + msg, 10000);
+        const f = await promptForm(msg.startsWith('PASSWORD_WRONG') ? 'Password not correct. Try again' : 'Backup password', [{ key: 'pw', label: 'Password', type: 'password' }], 'Open');
+        if (!f) return;
+        password = f.pw;
+      }
+    }
+  }
+
+  function phonePanel() {
+    return panel('Changes from the phone app', h('div', { class: 'stack' },
+      fromPhone.length ? h('div', { class: 'tblwrap' }, h('table', { class: 'tbl' }, h('tbody', null, fromPhone.map((f) => h('tr', null,
+        h('td', null, icon('cellphone', 'muted'), ' ', f.name),
+        h('td', { class: 'nowrap muted' }, fmtDate(f.modified, true)),
+        h('td', { class: 'act' }, h('button', { class: 'primary', onclick: () => reviewPhone(f.file) }, 'Review'))))))) : null,
+      h('div', { class: 'row' },
+        h('button', { onclick: () => reviewPhone(null) }, 'Open a changes file...'),
+        h('span', { class: 'muted small' }, 'Edits made in the phone app come back as a "Holdfast changes" file, saved onto this drive or sent to this PC.'))));
   }
 
   function sincePanel() {
@@ -103,8 +136,9 @@ export async function render(root, params = {}) {
     const { p, choices } = review;
     const drive = review.target.replace(/\\$/, '');
     const listed = p.changes;
+    const other = review.phone ? 'phone' : 'drive';
     const conflicts = listed.filter((c) => c.kind === 'conflict').length;
-    const setAll = async (side) => { for (const c of listed) choices[c.id] = side; await loadReview(review.target, choices); draw(); };
+    const setAll = async (side) => { for (const c of listed) choices[c.id] = side; await loadReview(review.target, choices, review.phone); draw(); };
     const rows = listed.map((c) => {
       const [txt, cls] = KIND[c.kind](c);
       const item = c.label.slice(1).join(' > ');
@@ -114,17 +148,17 @@ export async function render(root, params = {}) {
         h('td', null, h('span', { class: 'pill ' + cls }, txt)),
         h('td', { style: c.choice === 'pc' ? 'font-weight:600' : '' }, fmtVal(c.pc)),
         h('td', { style: c.choice === 'usb' ? 'font-weight:600' : '' }, fmtVal(c.usb)),
-        h('td', null, h('select', { onchange: async (e) => { choices[c.id] = e.target.value; await loadReview(review.target, choices); draw(); } },
-          h('option', { value: 'usb', selected: c.choice === 'usb' }, 'Use drive'),
+        h('td', null, h('select', { onchange: async (e) => { choices[c.id] = e.target.value; await loadReview(review.target, choices, review.phone); draw(); } },
+          h('option', { value: 'usb', selected: c.choice === 'usb' }, review.phone ? 'Use phone' : 'Use drive'),
           h('option', { value: 'pc', selected: c.choice === 'pc' }, 'Keep this PC'))));
     });
-    return panel(`Changes on ${drive} made on another computer`, h('div', { class: 'stack' },
-      h('div', null, `The copy of the program on this drive was used on another computer. `,
+    return panel(review.phone ? `Changes made in the phone app, saved ${fmtDate(p.manifest.phone.created, true)}` : `Changes on ${drive} made on another computer`, h('div', { class: 'stack' },
+      h('div', null, review.phone ? 'These are the edits made in the phone app since its copy was made. ' : `The copy of the program on this drive was used on another computer. `,
         h('b', null, `${p.usbChanges} change(s)`), ' found', conflicts ? [', ', h('b', { style: 'color:var(--red)' }, `${conflicts} changed on both`), ' (pick which to keep)'] : '', '. ',
-        p.pcChanges ? `${p.pcChanges} change(s) made on this PC since the last backup will be copied to the drive. ` : '',
-        'Changes from the drive are selected by default. Check the list, then apply.'),
-      p.hasBase ? null : h('div', { class: 'note warn' }, 'This backup was made by an older version, so the app cannot tell which side made each change. Everything that differs is listed; choose what to keep.'),
-      p.vault.state === 'locked' ? h('div', { class: 'note warn row' }, 'The document vault on the drive has changed. Unlock the vault to compare documents.', h('button', { onclick: () => window.go('vault') }, 'Unlock vault')) : null,
+        p.pcChanges && !review.phone ? `${p.pcChanges} change(s) made on this PC since the last backup will be copied to the drive. ` : '',
+        `Changes from the ${other} are selected by default. Check the list, then apply.`),
+      p.hasBase ? null : review.phone ? h('div', { class: 'note warn' }, 'This PC no longer has a record of the phone copy this came from, so it cannot tell which side made each change. Everything that differs is listed; choose what to keep.') : h('div', { class: 'note warn' }, 'This backup was made by an older version, so the app cannot tell which side made each change. Everything that differs is listed; choose what to keep.'),
+      p.vault.state === 'locked' ? h('div', { class: 'note warn row' }, `The document vault on the ${other} has changed. Unlock the vault to compare documents.`, h('button', { onclick: () => window.go('vault') }, 'Unlock vault')) : null,
       p.vault.state === 'different' ? h('div', { class: 'note warn' }, 'The document vault on the drive is a different vault (created separately), so it is not compared or changed.') : null,
       listed.length ? h('div', { class: 'tblwrap', style: 'max-height:360px' }, h('table', { class: 'tbl' },
         h('thead', null, h('tr', null, ['Section', 'Item', 'What happened', 'This PC', 'Drive', 'Use'].map((l) => h('th', null, l)))),
@@ -132,17 +166,17 @@ export async function render(root, params = {}) {
       h('div', { class: 'row' },
         h('button', { class: 'primary', disabled: p.vault.state === 'locked', onclick: async () => {
           const take = listed.filter((c) => c.choice === 'usb').length;
-          if (!(await confirmBox(`Bring ${take} change(s) from the drive into this PC, keep the rest as they are here, then update the drive so both match?`, 'Apply'))) return;
+          if (!(await confirmBox(review.phone ? `Bring ${take} change(s) from the phone into this PC and keep the rest as they are here?` : `Bring ${take} change(s) from the drive into this PC, keep the rest as they are here, then update the drive so both match?`, 'Apply'))) return;
           busy = true;
           try {
             store.flush();
             const r = await window.api.usb.apply(review.target, choices);
-            status(`Applied ${r.applied} change(s). This PC and the drive now match.`, 10000);
+            status(review.phone ? `Applied ${r.applied} change(s) from the phone. Back up with "Copy for the phone app" to send the merged plan back to it.` : `Applied ${r.applied} change(s). This PC and the drive now match.`, 10000);
             store.reloadFromDisk();
           } catch (e) { status('Could not apply: ' + errMsg(e), 10000); }
           busy = false;
-        } }, icon('sync'), 'Apply and update drive'),
-        h('button', { onclick: () => setAll('usb') }, 'Use drive for all'),
+        } }, icon('sync'), review.phone ? 'Apply' : 'Apply and update drive'),
+        h('button', { onclick: () => setAll('usb') }, `Use ${other} for all`),
         h('button', { onclick: () => setAll('pc') }, 'Keep this PC for all'),
         h('span', { class: 'spacer' }),
         h('button', { onclick: () => { review = null; draw(); } }, 'Not now'))));
@@ -157,7 +191,7 @@ export async function render(root, params = {}) {
       review ? reviewPanel() : null,
       h('div', { class: 'grid g21' },
         h('div', { class: 'stack' }, drivePanel(), since && !review ? sincePanel() : null, includePanel()),
-        h('div', { class: 'stack' }, restorePanel(), h('div', { class: 'note' }, 'Back up after changing the plan and at least monthly. Keep one drive in your grab bag and, if you can, one with someone away from home.'))));
+        h('div', { class: 'stack' }, phonePanel(), restorePanel(), h('div', { class: 'note' }, 'Back up after changing the plan and at least monthly. Keep one drive in your grab bag and, if you can, one with someone away from home.'))));
   }
 
   function drivePanel() {
@@ -217,7 +251,7 @@ export async function render(root, params = {}) {
       runBtn.disabled = true;
       cancelBtn.disabled = false;
       const pdfHtml = opts.pdf ? buildDocument(SECTIONS.map((x) => x.id)) : null;
-      const go = (overwrite) => (store.flush(), window.api.usb.run(target.path, { plan: opts.plan, password: opts.plan && opts.protect ? pw.value : null, vault: opts.vault, library: opts.library, tiles: opts.tiles, app: opts.app, pdfHtml, overwrite }));
+      const go = (overwrite) => (store.flush(), window.api.usb.run(target.path, { plan: opts.plan, password: opts.plan && opts.protect ? pw.value : null, vault: opts.vault, library: opts.library, tiles: opts.tiles, app: opts.app, phone: opts.phone && opts.plan, pdfHtml, overwrite }));
       try {
         let r;
         try { r = await go(false); } catch (e) {
@@ -256,6 +290,7 @@ export async function render(root, params = {}) {
         opt('vault', 'Document vault', est.vault, est.vaultExists ? 'Copied still encrypted. Opens with your vault password or recovery code.' : 'No vault set up yet.', !est.vaultExists),
         opt('library', 'Offline library', est.library, 'Saved web pages (GOV.UK, NHS and so on).'),
         opt('tiles', 'Offline map tiles', est.tiles, 'Maps you downloaded for offline use.'),
+        opt('phone', 'Copy for the phone app', null, 'One file the Holdfast phone app opens from this drive: the plan, and the document vault if ticked (still encrypted). Uses the backup password if set.'),
         opt('app', 'Copy of this program', est.appAvailable ? est.app : null, est.appAvailable ? 'Run it from the drive on any Windows PC; it opens the backup directly.' : est.appNote, !est.appAvailable)))),
       h('div', { class: 'row' },
         runBtn, cancelBtn,

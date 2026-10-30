@@ -1,6 +1,6 @@
 import * as store from '../lib/store.js';
 import { h, panel, status, fmtDate, fmtBytes, promptForm, confirmBox, daysUntil, icon, summary } from '../lib/ui.js';
-import { printDialog } from '../lib/printdialog.js';
+import { printDialog, loadPdfjs } from '../lib/printdialog.js';
 
 const CATEGORIES = ['Identity', 'Insurance', 'Property', 'Financial', 'Medical', 'Vehicle', 'Legal', 'Family', 'Pets', 'Home inventory', 'Other'];
 
@@ -12,6 +12,9 @@ const SUGGESTED = [
   ['Will and power of attorney', 'Legal'], ['Prescriptions and medication list', 'Medical'], ['NHS numbers and GP details', 'Medical'], ['Vaccination records', 'Medical'],
   ['Vehicle logbook (V5C)', 'Vehicle'], ['Pet microchip and vaccination records', 'Pets'], ['Recent photo of each person', 'Family'], ['Photos or video of home contents', 'Home inventory'],
 ];
+
+// The phone app (web/api.js) gets its vault from the computer, so it cannot create one or change its passwords.
+const WEB = window.api.platform === 'web';
 
 const PREVIEW = { image: /^image\/(png|jpeg|gif|webp|bmp|svg\+xml)$/, pdf: /^application\/pdf$/, text: /^(text\/|application\/json)/ };
 
@@ -42,6 +45,11 @@ export async function render(root) {
 
   // ---- First run --------------------------------------------------------------------------
   function setup() {
+    if (WEB) {
+      return panel('No document vault on this phone', h('div', { class: 'stack' },
+        h('div', null, 'The vault is set up on the computer. To bring it here, back up to a USB drive with "Document vault" and "Copy for the phone app" ticked, then open the phone file on the Phone copy page.'),
+        h('div', null, h('button', { class: 'primary', onclick: () => window.go('phone') }, icon('cellphone-arrow-down'), 'Phone copy'))));
+    }
     const pw = h('input', { type: 'password', autocomplete: 'new-password', oninput: () => meter() });
     const pw2 = h('input', { type: 'password', autocomplete: 'new-password' });
     const strength = h('span', { class: 'muted small' });
@@ -124,7 +132,7 @@ export async function render(root) {
       try {
         await window.api.vault.unlock(inp.value, recovery);
         st = await window.api.vault.status();
-        if (recovery) {
+        if (recovery && !WEB) {
           const v = await promptForm('Set a new vault password', [{ key: 'pw', label: 'New password', type: 'password' }, { key: 'pw2', label: 'Repeat', type: 'password' }], 'Save');
           if (v && v.pw && v.pw === v.pw2) {
             try { await window.api.vault.changePassword(v.pw, false); status('Password changed'); } catch (e) { status(e.message, 8000); }
@@ -256,7 +264,8 @@ export async function render(root) {
           [[1, '1 minute'], [5, '5 minutes'], [15, '15 minutes'], [30, '30 minutes'], [60, '1 hour'], [0, 'Never (still locks on Windows lock, sleep and exit)']].map(([v, l]) => h('option', { value: v, selected: Number(s.vaultAutoLock ?? 5) === v }, l))),
         h('label', null, 'Created'), h('span', null, fmtDate(st.created, true)),
         h('label', null, 'Password changed'), h('span', null, st.passwordChanged ? fmtDate(st.passwordChanged, true) : 'Never')),
-      h('div', { class: 'row' },
+      WEB ? h('div', { class: 'note' }, 'The vault password is changed on the computer. Make a new phone copy afterwards.') : null,
+      WEB ? null : h('div', { class: 'row' },
         h('button', { onclick: async () => {
           const v = await promptForm('Change vault password', [{ key: 'pw', label: 'New password', type: 'password' }, { key: 'pw2', label: 'Repeat', type: 'password' }], 'Change');
           if (!v) return;
@@ -268,7 +277,7 @@ export async function render(root) {
           const r = await window.api.vault.changePassword(null, true);
           await showRecoveryCode(r.recoveryCode, false);
         } }, 'New recovery code')),
-      h('div', { class: 'row' },
+      WEB ? null : h('div', { class: 'row' },
         h('button', { onclick: async () => { const r = await window.api.vault.backup(); if (r.ok) status('Encrypted backup saved to ' + r.path, 10000); } }, 'Back up vault...'),
         h('button', { onclick: async () => {
           if (!(await confirmBox('Restore replaces this vault with the backup. The current vault is kept in the data folder as "vault-replaced-...". Continue?', 'Choose folder'))) return;
@@ -281,7 +290,7 @@ export async function render(root) {
           st = await window.api.vault.status();
           draw();
         } }, 'Delete vault')),
-      h('div', { class: 'note' }, 'Backups stay encrypted and open with the same password or recovery code. Copy one to a USB stick for your grab bag.')));
+      WEB ? null : h('div', { class: 'note' }, 'Backups stay encrypted and open with the same password or recovery code. Copy one to a USB stick for your grab bag.')));
   }
 
   // ---- Unlocked: one document --------------------------------------------------------------
@@ -347,6 +356,11 @@ export async function render(root) {
       box.append(h('div', { class: 'muted' }, 'No file selected.'));
       return box;
     }
+    if (WEB) {
+      box.append(h('div', { class: 'muted' }, 'Opening...'));
+      webPreview(box, f).catch((e) => box.replaceChildren(h('div', { class: 'muted' }, 'Could not show the file: ' + e.message)));
+      return box;
+    }
     const src = 'vault://file/' + f.id + '/' + encodeURIComponent(f.name);
     if (PREVIEW.image.test(f.type)) {
       const img = h('img', { src, alt: f.name, title: 'Click to toggle actual size', onclick: () => img.classList.toggle('actual') });
@@ -366,6 +380,37 @@ export async function render(root) {
         h('div', { class: 'note' }, 'Opening in another program writes a temporary decrypted copy. It is deleted when the vault locks.')));
     }
     return box;
+  }
+
+  // On the phone files are decrypted into blob: URLs, and PDFs are drawn page by page, as phone browsers do not show
+  // a PDF inside a page.
+  async function webPreview(box, f) {
+    const src = await window.api.vault.fileUrl(f.id);
+    if (PREVIEW.image.test(f.type)) {
+      const img = h('img', { src, alt: f.name, title: 'Tap to toggle actual size', onclick: () => img.classList.toggle('actual') });
+      return box.replaceChildren(img);
+    }
+    if (PREVIEW.text.test(f.type)) return box.replaceChildren(h('pre', null, await (await fetch(src)).text()));
+    if (PREVIEW.pdf.test(f.type)) {
+      const lib = await loadPdfjs();
+      const doc = await lib.getDocument({ data: new Uint8Array(await (await fetch(src)).arrayBuffer()), isEvalSupported: false }).promise;
+      const pages = h('div', { class: 'pdfpages' });
+      box.replaceChildren(pages);
+      const width = Math.max(320, box.clientWidth - 16) * (window.devicePixelRatio || 1);
+      for (let n = 1; n <= doc.numPages; n++) {
+        const page = await doc.getPage(n);
+        const vp = page.getViewport({ scale: width / page.getViewport({ scale: 1 }).width });
+        const canvas = h('canvas', { width: Math.floor(vp.width), height: Math.floor(vp.height) });
+        pages.append(canvas);
+        await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
+      }
+      return;
+    }
+    box.replaceChildren(h('div', { class: 'stack', style: 'padding:20px' },
+      h('div', null, `${f.name} (${f.type}, ${fmtBytes(f.size)}) cannot be shown here.`),
+      h('div', { class: 'row' },
+        h('button', { onclick: () => window.api.vault.openExternal(f.id).catch((e) => status(e.message, 8000)) }, 'Open'),
+        h('button', { onclick: () => window.api.vault.saveCopy(f.id) }, 'Download decrypted copy'))));
   }
 
   await draw();

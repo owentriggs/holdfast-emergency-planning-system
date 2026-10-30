@@ -1,3 +1,4 @@
 node_modules/
 dist/
 build/launcher.exe
+web-dist/
