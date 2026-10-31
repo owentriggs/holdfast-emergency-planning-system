@@ -248,6 +248,8 @@ const renderPdf = async (html, a5) => {
   if (a5) html += A5_CSS;
   return pdfOnce(await withPageNumbers(html, a5), a5);
 };
+// Box labels: the document's own @page size and edge to edge, with no page numbers.
+const labelPdf = (html) => withHtmlWindow(html, (pw) => pw.webContents.printToPDF({ preferCSSPageSize: true, printBackground: true, margins: { marginType: 'none' } }));
 
 function registerIpc(dataRoot) {
   ipcMain.handle('store:all', () => store.all());
@@ -356,8 +358,8 @@ function registerIpc(dataRoot) {
   let layout = { key: null, pdf: null };
   ipcMain.handle('print:printers', () => printjob.printers(win.webContents));
   ipcMain.handle('print:build', async (_e, html, o = {}) => {
-    const key = (o.booklet ? 'a5:' : 'a4:') + html;
-    if (layout.key !== key) layout = { key, pdf: await renderPdf(html, o.booklet) };
+    const key = (o.label ? 'label:' : o.booklet ? 'a5:' : 'a4:') + html;
+    if (layout.key !== key) layout = { key, pdf: await (o.label ? labelPdf(html) : renderPdf(html, o.booklet)) };
     return printjob.arrange(layout.pdf, o);
   });
   ipcMain.handle('print:run', (_e, pdf, o) => printjob.printPdf(Buffer.from(pdf), o));

@@ -17,7 +17,7 @@ const isRows = (v) => Array.isArray(v) && v.length > 0 && v.every((r) => isObj(r
 const KEY_LABELS = {
   household: 'Household', contacts: 'Contacts', supplies: 'Supplies', checklists: 'Checklists', locations: 'Key locations', utilities: 'Utilities',
   meeting: 'Meeting points', routes: 'Routes', documents: 'Documents register', medications: 'Medications', scenarios: 'Scenario plans',
-  firstAidKit: 'First aid kit', radio: 'Radio', markers: 'Map markers', reviewLog: 'Review log', vault: 'Document vault', people: 'People', pets: 'Pets', files: 'Files',
+  firstAidKit: 'First aid kit', radio: 'Radio', markers: 'Map markers', reviewLog: 'Review log', vault: 'Document vault', people: 'People', pets: 'Pets', files: 'Files', labels: 'Box labels',
 };
 // Field names that do not read well when split from camelCase. Others become "Property type" from "propertyType".
 const FIELD_LABELS = {

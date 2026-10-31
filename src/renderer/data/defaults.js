@@ -393,6 +393,8 @@ export const DEFAULTS = {
   webcache: [],
   markers: [],
   reviewLog: [],
+  // Print > Box labels. Sheet settings shared by every label, then the labels themselves.
+  labels: { size: 'A5', landscape: true, ink: 'colour', hex: true, items: [] },
   weatherCache: null,
   warningsCache: null,
   floodCache: null,

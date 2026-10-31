@@ -31,16 +31,18 @@ function parsePages(text, total) {
 }
 
 // Lays the document out and saves it as a PDF, without the dialog.
-export async function savePdf(html, name) {
-  const { pdf } = await window.api.print.build(html, {});
+// sheet: see printDialog.
+export async function savePdf(html, name, sheet) {
+  const { pdf } = await window.api.print.build(html, sheet ? { label: true } : {});
   const r = await window.api.print.save(pdf, name);
   if (r.ok) status('Saved ' + r.path, 8000);
 }
 
 // html: a complete document. name: used for the PDF file name.
-export function printDialog(html, { name = 'Emergency plan' } = {}) {
+// sheet: { landscape, pageSize } for box labels, which set their own page size and are never a booklet.
+export function printDialog(html, { name = 'Emergency plan', sheet = null } = {}) {
   return new Promise((resolve) => {
-    const o = { ...last, pages: '' };
+    const o = { ...last, pages: '', booklet: sheet ? false : last.booklet };
     let printers = [];
     let built = null; // { pdf, total, numbers } for the current layout and page choice
     let seq = 0;
@@ -107,7 +109,7 @@ export function printDialog(html, { name = 'Emergency plan' } = {}) {
       sync();
       view.classList.add('busy');
       try {
-        const r = await window.api.print.build(html, { booklet: o.booklet, pages: chosen });
+        const r = await window.api.print.build(html, { booklet: o.booklet, pages: chosen, label: !!sheet });
         if (my !== seq) return;
         built = r;
         pagesOf.textContent = `of ${r.total}`;
@@ -127,7 +129,7 @@ export function printDialog(html, { name = 'Emergency plan' } = {}) {
       const lib = await loadPdfjs();
       const doc = await lib.getDocument({ data: bytes.slice(), isEvalSupported: false }).promise;
       if (my !== seq) return;
-      const width = Math.min(view.clientWidth - 40, o.booklet ? 820 : 560);
+      const width = Math.min(view.clientWidth - 40, o.booklet || (sheet && sheet.landscape) ? 820 : 560);
       const seen = new IntersectionObserver((entries) => entries.forEach(async (en) => {
         if (!en.isIntersecting) return;
         seen.unobserve(en.target);
@@ -152,12 +154,12 @@ export function printDialog(html, { name = 'Emergency plan' } = {}) {
     async function run() {
       const p = printer();
       if (!p.name) return;
-      Object.assign(last, { printer: o.printer, copies: o.copies, collate: o.collate, duplex: o.booklet ? last.duplex : o.duplex, color: o.color, booklet: o.booklet });
+      Object.assign(last, { printer: o.printer, copies: o.copies, collate: o.collate, duplex: o.booklet ? last.duplex : o.duplex, color: o.color, booklet: sheet ? last.booklet : o.booklet });
       sending = true;
       sync();
       status('Sending to ' + p.label + '...');
       const r = await window.api.print.run(built.pdf, {
-        deviceName: p.name, copies: o.copies, collate: o.collate, color: color.value === 'color', duplexMode: duplex.value, landscape: o.booklet,
+        deviceName: p.name, copies: o.copies, collate: o.collate, color: color.value === 'color', duplexMode: duplex.value, landscape: sheet ? sheet.landscape : o.booklet, pageSize: sheet && sheet.pageSize,
       });
       if (r.ok) {
         status('Sent to ' + p.label);
@@ -180,7 +182,7 @@ export function printDialog(html, { name = 'Emergency plan' } = {}) {
             h('label', null, 'Printer'), printerSel,
             h('label', null, 'Copies'), h('div', { class: 'row' }, copies, collateLbl),
             h('label', null, 'Pages'), h('div', { class: 'row', style: 'flex-wrap:nowrap' }, pages, pagesOf),
-            h('label', null, 'Layout'), layout,
+            sheet ? null : h('label', null, 'Layout'), sheet ? null : layout,
             h('label', null, 'Sides'), duplex,
             h('label', null, 'Colour'), color),
           summary, note)),

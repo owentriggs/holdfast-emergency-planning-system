@@ -75,7 +75,7 @@ async function printPdf(pdf, o) {
     await new Promise((r) => setTimeout(r, 1500));
     return await new Promise((resolve) => pw.webContents.print({
       silent: true, printBackground: true, deviceName: o.deviceName, copies: o.copies || 1, collate: o.collate !== false,
-      color: o.color !== false, duplexMode: o.duplexMode || 'simplex', landscape: !!o.landscape,
+      color: o.color !== false, duplexMode: o.duplexMode || 'simplex', landscape: !!o.landscape, ...(o.pageSize ? { pageSize: o.pageSize } : {}),
     }, (ok, reason) => resolve({ ok, reason })));
   } finally {
     pw.destroy();

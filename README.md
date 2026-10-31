@@ -43,7 +43,7 @@ The files are not code-signed, so Windows SmartScreen may say it "protected your
 | **Maps** | Topographic maps you can download for an area and use offline, with your own markers. |
 | **Weather and Warnings** | Forecast (Open-Meteo), Met Office weather warnings and Environment Agency flood warnings for your postcode. |
 | **Calculators** | Water needed, battery and power station runtime, power bank charges, and how long the fridge and freezer stay safe in a power cut. |
-| **Print Centre** | Print or save as PDF any part of the plan: the full plan, a one-page summary, chosen first aid guides, or cut-out wallet cards. |
+| **Print Centre** | Print or save as PDF any part of the plan: the full plan, a one-page summary, chosen first aid guides, or cut-out wallet cards. **Box labels** makes signs for kit boxes, grab bags, water and food, A3 to A7, with contents and packed and check-by dates, in colour or black only. |
 | **USB Backup** | Copy everything to a USB stick or external drive for your grab bag, optionally with a copy of the program that runs from the stick. |
 
 ### Emergency wallet cards
